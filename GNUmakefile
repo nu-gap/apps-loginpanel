@@ -30,7 +30,7 @@ GNUSTEP_INSTALLATION_DIR = $(GNUSTEP_SYSTEM_ROOT)
 
 GNUSTEP_MAKEFILES = $(GNUSTEP_SYSTEM_ROOT)/Makefiles
 
-loginpanel_MAIN_MODEL_FILE = loginpanel.gmodel
+loginpanel_MAIN_MODEL_FILE = loginwindow.gorm
 
 include $(GNUSTEP_MAKEFILES)/common.make
 
@@ -40,7 +40,7 @@ APP_NAME = loginpanel
 # The Objective-C source files to be compiled
 loginpanel_OBJC_FILES = loginpanel_main.m LoginImageView.m \
 	  LoginPanelController.m LoginWindow.m\
-          LoginTheme.m
+          LoginTheme.m TestButton.m
 
 # The Resource files to be copied into the app's resources directory
 loginpanel_RESOURCE_FILES = gnustep.tiff\
@@ -51,7 +51,7 @@ loginpanel_RESOURCE_FILES = gnustep.tiff\
                    restart.tiff \
                    power_invert.tiff \
                    restart_invert.tiff \
-                   English.lproj/loginpanel.gmodel \
+                   English.lproj/loginwindow.gorm \
                    English.lproj/InfoPanel.gmodel
 
 

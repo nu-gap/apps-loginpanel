@@ -59,9 +59,7 @@
 {
   NSPoint origin;
 
-#ifdef DEBUG
-  puts("Ordering front...");
-#endif
+  NSLog(@"HELLLLLLLLLLLOOOOOOOOOOOOOOOOOOOOOOOOOO!!!!");
   [window makeKeyAndOrderFront: self];
 #ifdef GNUSTEP
   // Eliminate the application icon!!
@@ -150,11 +148,11 @@
 
 - (void)awakeFromNib
 {
-#ifdef DEBUG
   puts("The sleeper has awakened -- awakeFromNib");
-#endif
-  if(window == nil) puts("Window is nil!");
+  if(window == nil) NSLog(@"Window is nil!");
+  else NSLog(@"The window = %@",window);
   [window initializeInterface];
+  [window waggle];
 }
 
 - (void)rejectEntries

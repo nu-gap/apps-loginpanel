@@ -50,6 +50,7 @@
 {
   // It was neccesary to override this method to get the borderless
   // window since it is not available from InterfaceBuilder.
+  NSLog(@"LoginWindow class has been instantiated...");
   return [super initWithContentRect: contentRect
 		styleMask: NSBorderlessWindowMask
 		backing: bufferingType
@@ -97,6 +98,8 @@
   NSRect windowRect;
   int i = 0, j = 0;
     
+
+  NSLog(@"Waggling window... %@",self);
   windowRect = [self frame];
   savedOrigin = windowRect.origin;
   origin = savedOrigin;
@@ -122,6 +125,7 @@
         }
     }
   [self setFrameOrigin: savedOrigin];
+  // [self close];
 }
 
 - (void)shrink
@@ -236,7 +240,7 @@
 - (void)initializeInterface
 {
 #ifdef DEBUG
-  printf("Initialize interface");
+  NSLog(@"Initialize interface window=%@",self);
 #endif
   // Set up all elements of the display...
   [self displayPanel];
