@@ -1,0 +1,34 @@
+Andrew,
+
+Here is the artwork I created for the loginpanel.app 
+I am working on.
+
+A short synopsis for each image....
+
+loginPanel.tiff is basically a concept tiff which
+might be used in the app early on while I am
+simply getting it to work properly.
+
+loginPanelBlank.tiff is going to be used in the
+final app once the title and logo areas are made
+into NSImageView objects.   This way the user
+can choose what he/she wants displayed.
+
+gnustep.tiff is for later when the title area 
+becomes an NSImageView in which any tiff the 
+user wishes can be displayed.
+
+power.tiff and restart.tiff were created
+for the power and restart buttons which will
+will be on the loginpanel.
+
+loginicon.tiff was created to act as the
+icon the user will see in the fileviewer.
+
+I didn't provide any renditions of the gnustep
+icon since I think we have enough of those.
+
+Later,
+
+Gregory Casamento
+

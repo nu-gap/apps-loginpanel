@@ -1,0 +1,25 @@
+"FirstResponder" = {ACTIONS = {}; OUTLETS = {}; SUPERCLASS = NSObject; };
+"LoginImageView" = {ACTIONS = {}; OUTLETS = {}; SUPERCLASS = NSImageView; };
+"LoginPanelController" = {
+    ACTIONS = {
+        "passwordEntered:" = id; 
+        "powerButton:" = id; 
+        "restartButton:" = id; 
+        "showInfo:" = id; 
+        "usernameEntered:" = id; 
+    }; 
+    OUTLETS = {infoPanel = id; passwordField = id; usernameField = id; window = id; }; 
+    SUPERCLASS = NSObject; 
+};
+"LoginWindow" = {
+    ACTIONS = {}; 
+    OUTLETS = {
+        hostnameText = id; 
+        loginImageView = id; 
+        passwordText = id; 
+        powerButton = id; 
+        restartButton = id; 
+        usernameText = id; 
+    }; 
+    SUPERCLASS = NSWindow; 
+};

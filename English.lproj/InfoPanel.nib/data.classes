@@ -1,0 +1,12 @@
+"FirstResponder" = {ACTIONS = {}; OUTLETS = {}; SUPERCLASS = NSObject; };
+"LoginPanelController" = {
+    ACTIONS = {
+        "passwordEntered:" = id; 
+        "powerButton:" = id; 
+        "restartButton:" = id; 
+        "showInfo:" = id; 
+        "usernameEntered:" = id; 
+    }; 
+    OUTLETS = {infoPanel = id; passwordField = id; usernameField = id; window = id; }; 
+    SUPERCLASS = NSObject; 
+};
