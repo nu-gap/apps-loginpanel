@@ -137,7 +137,36 @@
 	    "useStandardKerning:",
 	    "useStandardLigatures:",
 	    "yank:",
-	    "zoom:"
+	    "zoom:",
+	    "passwordEntered:",
+	    "powerButton:",
+	    "restartButton:",
+	    "usernameEntered:",
+	    "showInfo:"
+	);
+	Super = NSObject;
+    };
+    LoginImageView = {
+	Actions = (
+	);
+	Outlets = (
+	);
+	Super = NSImageView;
+    };
+    LoginPanelController = {
+	Actions = (
+	    "passwordEntered:",
+	    "powerButton:",
+	    "restartButton:",
+	    "usernameEntered:",
+	    "showInfo:"
+	);
+	Outlets = (
+	    passwordField,
+	    usernameField,
+	    window,
+	    infoPanel,
+	    authenticator
 	);
 	Super = NSObject;
     };
@@ -145,6 +174,11 @@
 	Actions = (
 	);
 	Outlets = (
+	    hostnameText,
+	    loginImageView,
+	    passwordText,
+	    powerButton,
+	    restartButton
 	);
 	Super = NSWindow;
     };

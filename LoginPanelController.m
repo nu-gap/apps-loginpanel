@@ -33,7 +33,7 @@
 #import "LoginPanelController.h"
 #import "LoginImageView.h"
 
-#ifdef GNUSTEP
+#ifdef HAVE_PAM
 #import <gscrypt/GSPam.h>
 #endif
 
@@ -47,7 +47,7 @@
   // application pretend as though it is xdm so that I don't
   // have to write my own .conf file for PAM.   I will get around
   // to writing it once I get this working.
-#ifdef GNUSTEP
+#ifdef HAVE_PAM
   authenticator = [[GSPam alloc] initWithServiceName: @"xdm"];
 #endif
   defaults = [NSUserDefaults standardUserDefaults];
@@ -59,9 +59,9 @@
 {
   NSPoint origin;
 
-  NSLog(@"HELLLLLLLLLLLOOOOOOOOOOOOOOOOOOOOOOOOOO!!!!");
+  NSLog(@"");
   [window makeKeyAndOrderFront: self];
-#ifdef GNUSTEP
+#ifdef HAVE_PAM
   // Eliminate the application icon!!
   origin.x = -1000;
   origin.y = -1000;
@@ -84,7 +84,7 @@
       NSLog(@"Failed to start PAM");
     }
 
-#ifdef GNUSTEP
+#ifdef HAVE_PAM
   [authenticator setUser: [usernameField stringValue]];
   [authenticator setPassword: [passwordField stringValue]];
   verified = [authenticator authenticateWithFlag: PAM_DISALLOW_NULL_AUTHTOK
@@ -167,7 +167,7 @@
 {
   [window shrink];
   [window close];
-#ifdef GNUSTEP
+#ifdef HAVE_PAM
   [authenticator openSessionSilently: NO];  // We will spend a great deal of time here!!
 #endif
   [NSBundle loadNibNamed: @"NEXTSTEP_loginpanel"

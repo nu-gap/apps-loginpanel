@@ -40,7 +40,7 @@ APP_NAME = loginpanel
 # The Objective-C source files to be compiled
 loginpanel_OBJC_FILES = loginpanel_main.m LoginImageView.m \
 	  LoginPanelController.m LoginWindow.m\
-          LoginTheme.m TestButton.m
+          LoginTheme.m 
 
 # The Resource files to be copied into the app's resources directory
 loginpanel_RESOURCE_FILES = gnustep.tiff\

@@ -52,7 +52,7 @@ ADDITIONAL_CFLAGS += -g -DDEBUG
 ADDITIONAL_INCLUDE_DIRS += -I../../Headers
 
 # Additional LDFLAGS to pass to the linker
-ADDITIONAL_LDFLAGS += -lcrypt -lgscrypt -lpam
+# ADDITIONAL_LDFLAGS += -lcrypt -lgscrypt -lpam
 
 # Additional library directories the linker should search
 ADDITIONAL_LIB_DIRS += -L../../Source/$(GNUSTEP_OBJ_DIR) -L/usr/local/lib
