@@ -1,0 +1,51 @@
+NOTES:
+
+Loginpanel.app is not currently ready for full use.   It is getting closer
+as there are only a few things left to fo.  The application is intended for use on
+Linux systems w/ the GNUstep libraries installed.  Although I see no reason
+why it shouldn't run on other UNIX or UNIX-like systems using GNUstep.
+
+System Requirements:
+Linux, gscrypt, GNUstep
+
+Change History
+11/2000
+
+NSTextField commited to repository.  I need to wait
+for further updates in the NSLayoutManager/
+GSSimpleLayoutManager code before I can add the 
+echoes bullets feature, but it works for now.
+
+The only thing which needs to be done to make
+the application of practical use is to find a 
+way to install it so that it will work prior to
+anyone being logged in to the machine.
+
+10/2000
+
+I am making some progress on the fixes for 
+NSSecureTextField.  I believe I should have it 
+working sometime soon.
+
+8/2000
+
+The application is getting closer and closer
+to completion.  Authentication using PAM now works
+under GNUstep on Linux.   It seems as though the
+only real obstacle to getting it working completely
+is the fact that NSSecureTextField doesn't work.
+
+3/2000
+
+This application is not ready for primetime yet.
+It is mostly experimental at this stage.  The
+reason I am releasing it now is to let those who
+are interested play with it.
+
+It seems to work under OPENSTEP4.2/Mach, at the
+moment.  It does everything I expect it too.
+It seems to only partially work under GNUstep.
+I believe this has something to do with how
+the gmodel file is being translated.
+
+Gregory Casamento
