@@ -52,7 +52,7 @@ loginpanel_RESOURCE_FILES = gnustep.tiff\
                    power_invert.tiff \
                    restart_invert.tiff \
                    English.lproj/loginwindow.gorm \
-                   English.lproj/InfoPanel.gmodel
+                   English.lproj/InfoPanel.gorm
 
 
 -include GNUmakefile.preamble
