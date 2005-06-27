@@ -28,8 +28,6 @@
 
 GNUSTEP_INSTALLATION_DIR = $(GNUSTEP_SYSTEM_ROOT)
 
-GNUSTEP_MAKEFILES = $(GNUSTEP_SYSTEM_ROOT)/Makefiles
-
 loginpanel_MAIN_MODEL_FILE = loginwindow.gorm
 
 include $(GNUSTEP_MAKEFILES)/common.make
