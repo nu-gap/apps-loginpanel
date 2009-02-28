@@ -101,16 +101,10 @@
   
   if( [authenticator isPasswordCorrect] == YES )
     {
-#ifdef DEBUG
-      puts("Proceed to login...");
-#endif
       [self logUserIn];
     }
   else
     {
-#ifdef DEBUG
-      puts("Verification failed...");
-#endif
       [self rejectEntries];
     }
 

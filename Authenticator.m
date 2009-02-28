@@ -3,12 +3,13 @@
 
    Class to allow loginpanel to authenticate users
 
-   Copyright (C) 2000 Free Software Foundation, Inc.
+   Copyright (C) 2000-2009 GNUstep Application Project
 
    Author:  Gregory John Casamento <borgheron@yahoo.com>
    Date: 2000
+   Author: Riccardo Mottola <rmottola@users.sf.net>
    
-   This file is part of GNUstep.
+   This file is part of loginpanel, GNUstep Application Project
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public
@@ -34,6 +35,11 @@
 #include <security/pam_appl.h>
 #endif
 
+/* needed on linux to get crypt from unistd */
+#ifdef __linux__
+#define _XOPEN_SOURCE
+#endif
+
 #include <unistd.h>
 
 
@@ -46,8 +52,11 @@
   NSLog(@"Initing authenticator");
   username = nil;
   password = nil;
-  
+#ifdef __linux__
+  passwordFilePath = @"/etc/shadow";
+#else 
   passwordFilePath = @"/etc/master.passwd";
+#endif
   return self;
 }
 
@@ -96,7 +105,7 @@
   return password;
 }
 
-// Action methods. 
+/** perform the actual password verification */
 - (BOOL)isPasswordCorrect
 {
   NSLog(@"Verifying... %@", username);
