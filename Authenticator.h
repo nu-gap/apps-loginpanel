@@ -36,6 +36,9 @@
 #import <pwd.h>
 #endif
 
+#include <pwd.h>
+
+
 @interface Authenticator : NSObject
 {
     NSString *username;
@@ -43,8 +46,9 @@
 #if defined(GNUSTEP)
     pam_handle_t *handle;
 #endif
+    struct passwd *pw;
+    NSString *passwordFilePath;
 }
-- init;
 - initWithUsername: (NSString *)user
           password: (NSString *)pass;
 - (void)setUsername: (NSString *)user;

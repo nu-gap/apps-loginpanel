@@ -34,7 +34,8 @@ include $(GNUSTEP_MAKEFILES)/common.make
 APP_NAME = loginpanel
 
 # The Objective-C source files to be compiled
-loginpanel_OBJC_FILES = loginpanel_main.m LoginImageView.m \
+loginpanel_OBJC_FILES = Authenticator.m \
+          loginpanel_main.m LoginImageView.m \
 	  LoginPanelController.m LoginWindow.m\
           LoginTheme.m 
 

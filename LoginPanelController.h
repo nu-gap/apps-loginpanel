@@ -39,14 +39,13 @@
 
 @interface LoginPanelController : NSObject
 {
-    id passwordField;
-    id usernameField;
-    id window;
-    id infoPanel;
-    id authenticator;
+    IBOutlet NSSecureTextField *passwordField;
+    IBOutlet NSTextField *usernameField;
+    IBOutlet NSWindow *window;
+    IBOutlet NSPanel *infoPanel;
+    Authenticator *authenticator;
     NSUserDefaults *defaults;
 }
-- init;
 - (void)applicationDidFinishLaunching: (NSNotification *)notification;
 - (void)passwordEntered:(id)sender;
 - (void)powerButton:(id)sender;

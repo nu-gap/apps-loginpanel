@@ -32,13 +32,14 @@
 
 #import "LoginPanelController.h"
 #import "LoginImageView.h"
+#import "Authenticator.h"
 
 #ifdef HAVE_PAM
 #import <gscrypt/GSPam.h>
 #endif
 
 @implementation LoginPanelController
-- init
+- (id)init
 {
   // Initialize the superclass.
   [super init];
@@ -49,6 +50,8 @@
   // to writing it once I get this working.
 #ifdef HAVE_PAM
   authenticator = [[GSPam alloc] initWithServiceName: @"xdm"];
+#else
+  authenticator = [[Authenticator alloc] init];
 #endif
   defaults = [NSUserDefaults standardUserDefaults];
 
@@ -79,19 +82,24 @@
   printf("Password: %s\n", pwstring );
   printf("Verifying login...\n");
 #endif
+
+#if 0 /* no pam working yet */
   if(![authenticator start]) 
     {
       NSLog(@"Failed to start PAM");
     }
+#endif
+
+  [authenticator setUsername: [usernameField stringValue]];
+  [authenticator setPassword: [passwordField stringValue]];
 
 #ifdef HAVE_PAM
-  [authenticator setUser: [usernameField stringValue]];
-  [authenticator setPassword: [passwordField stringValue]];
-  verified = [authenticator authenticateWithFlag: PAM_DISALLOW_NULL_AUTHTOK
+//  verified = [authenticator authenticateWithFlag: PAM_DISALLOW_NULL_AUTHTOK
 			    silent: NO];
 #endif
 
-  if( verified )
+  
+  if( [authenticator isPasswordCorrect] == YES )
     {
 #ifdef DEBUG
       puts("Proceed to login...");

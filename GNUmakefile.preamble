@@ -51,7 +51,7 @@ ADDITIONAL_CFLAGS +=
 ADDITIONAL_INCLUDE_DIRS +=
 
 # Additional LDFLAGS to pass to the linker
-# ADDITIONAL_LDFLAGS +=
+ADDITIONAL_LDFLAGS += -lcrypt
 
 # Additional library directories the linker should search
 ADDITIONAL_LIB_DIRS += 
