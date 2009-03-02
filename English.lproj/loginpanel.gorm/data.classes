@@ -19,10 +19,10 @@
 	    "showInfo:"
 	);
 	Outlets = (
-	    passwordField,
 	    usernameField,
 	    window,
-	    infoPanel
+	    infoPanel,
+	    passwordField
 	);
 	Super = NSObject;
     };

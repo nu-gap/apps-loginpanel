@@ -1,12 +1,5 @@
 #
-#  Test apps makefile for GNUstep X/RAW GUI Backend
-#
-#  Copyright (C) 1997 Free Software Foundation, Inc.
-#
-#  Author: Scott Christley <scottc@net-community.com>
-#  Author: Felipe A. Rodriguez <far@ix.netcom.com>
-#
-#  This file is part of the GNUstep X/RAW GUI Backend.
+#  This file is part of the GNUstep Application Project
 #
 #  This library is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Library General Public
@@ -21,8 +14,8 @@
 #  If you are interested in a warranty or support for this source code,
 #  contact Scott Christley at scottc@net-community.com
 #
-#  You should have received a copy of the GNU Library General Public
-#  License along with this library; see the file COPYING.LIB.
+#  You should have received a copy of the GNU General Public
+#  License along with this library; see the file COPYING.
 #  If not, write to the Free Software Foundation,
 #  59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
@@ -47,10 +40,13 @@ loginpanel_RESOURCE_FILES = gnustep.tiff\
                    power.tiff \
                    restart.tiff \
                    power_invert.tiff \
-                   restart_invert.tiff \
-                   English.lproj/loginwindow.gorm \
-                   English.lproj/InfoPanel.gorm
+                   restart_invert.tiff 
 
+loginpanel_LOCALIZED_RESOURCE_FILES = \
+                   loginwindow.gorm \
+                   InfoPanel.gorm
+
+loginpanel_LANGUAGES = English
 
 -include GNUmakefile.preamble
 include $(GNUSTEP_MAKEFILES)/application.make

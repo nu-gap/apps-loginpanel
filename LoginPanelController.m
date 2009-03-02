@@ -169,10 +169,16 @@
 {
   [window shrink];
   [window close];
+
 #ifdef HAVE_PAM
   [authenticator openSessionSilently: NO];  // We will spend a great deal of time here!!
 #endif
-  [NSBundle loadNibNamed: @"NEXTSTEP_loginpanel"
+
+#ifndef HAVE_PAM
+  [authenticator startSession];
+#endif
+
+  [NSBundle loadNibNamed: @"loginpanel"
 	    owner: self];
 }
 
