@@ -165,6 +165,7 @@
 	      == NSOrderedSame)
 	        {
 		  NSLog(@"Equal");
+		  pw = getpwnam([username cString]);
 		  return YES;
 		}
 		else
@@ -197,15 +198,24 @@
 
 - (void)startSession
 {
-#ifndef DEBUG
-  // Set user and group ids
-  if ((initgroups(pw->pw_name, pw->pw_gid) != 0) 
-      || (setgid(pw->pw_gid) != 0) 
-      || (setuid(pw->pw_uid) != 0)) 
+  NSString *sessioncmd;
+  int pid = 0;
+
+  // fork ourselves before downgrade...
+  pid = vfork();
+  if(pid == 0)
     {
-      NSLog(@"Could not switch to user id %@.", username);
-      exit(0);
+      // Set user and group ids
+      if ((initgroups(pw->pw_name, pw->pw_gid) != 0) 
+	  || (setgid(pw->pw_gid) != 0) 
+	  || (setuid(pw->pw_uid) != 0)) 
+	{
+	  NSLog(@"Could not switch to user id %@.", username);
+	  exit(0);
+	}
+      
+      sessioncmd = [NSString stringWithFormat: @"sh %s/.xsession",pw->pw_dir];
+      system([sessioncmd cString]);
     }
-#endif
 }
 @end

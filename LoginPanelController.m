@@ -108,10 +108,12 @@
       [self rejectEntries];
     }
 
+#ifdef HAVE_PAM
   if(![authenticator end]) 
     {
       NSLog(@"Failed to end PAM");
     }
+#endif
 }
 
 - (void)powerButton:(id)sender
