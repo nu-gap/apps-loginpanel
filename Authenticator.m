@@ -187,13 +187,6 @@
 
 - (void)setEnvironment
 {
-#ifndef GNUSTEP  
-  /* Set environment */
-  environ = malloc(sizeof(char*) * 2);
-  environ[0] = 0;
-#else
-#endif
-
   chdir(pw->pw_dir);
 }
 
@@ -207,6 +200,11 @@
   pid = vfork();
   if(pid == 0)
     {
+      /* change home directory */
+      if(setenv("HOME", pw->pw_dir, YES) < 0)
+      {
+        NSLog(@"%d could not switch home to %s", errno, pw->pw_dir);
+      }
       // Set user and group ids
       if ((initgroups(pw->pw_name, pw->pw_gid) != 0) 
 	  || (setgid(pw->pw_gid) != 0) 
@@ -215,7 +213,6 @@
 	  NSLog(@"Could not switch to user id %@.", username);
 	  exit(0);
 	}
-      
       sessioncmd = [NSString stringWithFormat: @"sh %s/.xsession",pw->pw_dir];
       system([sessioncmd cString]);
     }
