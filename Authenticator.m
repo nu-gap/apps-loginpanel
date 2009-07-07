@@ -43,7 +43,6 @@
 #include <unistd.h>
 
 
-
 @implementation Authenticator
 // Initialization methods
 - (id)init
@@ -124,6 +123,8 @@
       NSLog(@"password: %@", password);
 
       pwdFileStr = [NSString stringWithContentsOfFile:passwordFilePath];
+      if ([pwdFileStr length] == 0)
+        NSLog(@"Empty password file");
       usersArray = [pwdFileStr componentsSeparatedByString:@"\n"];
       cryptedPwdFromFile = nil;
       enu = [usersArray objectEnumerator];
@@ -201,7 +202,8 @@
   NSString *sessioncmd;
   int pid = 0;
 
-  // fork ourselves before downgrade...
+  /* fork ourselves before downgrade...
+     vfork blocks the father process */
   pid = vfork();
   if(pid == 0)
     {

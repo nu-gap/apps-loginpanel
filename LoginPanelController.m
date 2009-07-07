@@ -63,13 +63,18 @@
   NSPoint origin;
 
   NSLog(@"");
-  [window makeKeyAndOrderFront: self];
-#ifdef HAVE_PAM
+  [self initialize];
+
   // Eliminate the application icon!!
   origin.x = -1000;
   origin.y = -1000;
   [[NSApp iconWindow] setFrameOrigin: origin];
-#endif
+}
+
+- (void)initialize
+{
+  [window restore]; 
+  [window makeKeyAndOrderFront: self];
 }
 
 - (void)passwordEntered:(id)sender
@@ -170,7 +175,9 @@
 - (void)logUserIn
 {
   [window shrink];
-  [window close];
+  [usernameField setStringValue: @""];
+  [passwordField setStringValue: @""];
+
 
 #ifdef HAVE_PAM
   [authenticator openSessionSilently: NO];  // We will spend a great deal of time here!!
@@ -179,9 +186,8 @@
 #ifndef HAVE_PAM
   [authenticator startSession];
 #endif
-
-  [NSBundle loadNibNamed: @"loginpanel"
-	    owner: self];
+  NSLog(@"resetting itself");
+  [self initialize];
 }
 
 - (void)showInfo: (id)sender

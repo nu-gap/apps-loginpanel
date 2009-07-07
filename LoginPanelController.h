@@ -41,12 +41,13 @@
 {
     IBOutlet NSSecureTextField *passwordField;
     IBOutlet NSTextField *usernameField;
-    IBOutlet NSWindow *window;
+    IBOutlet LoginWindow *window;
     IBOutlet NSPanel *infoPanel;
     Authenticator *authenticator;
     NSUserDefaults *defaults;
 }
 - (void)applicationDidFinishLaunching: (NSNotification *)notification;
+- (void)initialize;
 - (void)passwordEntered:(id)sender;
 - (void)powerButton:(id)sender;
 - (void)restartButton:(id)sender;
