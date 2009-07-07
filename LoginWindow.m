@@ -48,48 +48,17 @@
 		  backing:(NSBackingStoreType)bufferingType
 		    defer:(BOOL)flag
 {
+  id lw;
+  
   // It was neccesary to override this method to get the borderless
   // window since it is not available from InterfaceBuilder.
   NSLog(@"LoginWindow class has been instantiated...");
-  return [super initWithContentRect: contentRect
+  lw = [super initWithContentRect: contentRect
 		styleMask: NSBorderlessWindowMask
 		backing: bufferingType
 		defer: flag];
-}
-
-- (void)center
-{
-  NSScreen *aScreen = nil;
-  NSRect screenRect, windowRect;
-  NSSize screenSize, windowSize;
-  NSPoint windowOrigin, newOrigin;
-
-  // Get screen size..
-  aScreen = [self screen];
-  screenRect = [aScreen frame];
-  screenSize = screenRect.size;
-#ifdef DEBUG
-  printf("Screen size is %f x %f\n", screenSize.width, screenSize.height );
-#endif
-    
-  // Get window size..
-  windowRect = [self frame];
-  windowSize = windowRect.size;
-  windowOrigin = windowRect.origin;
-#ifdef DEBUG
-  printf("Window size is %f x %f\n", windowSize.width, windowSize.height );
-  printf("Window origin is (%f, %f)\n", windowOrigin.x, windowOrigin.y );
-#endif
-    
-  // Calculate the new position of the window.
-  newOrigin.x = ( screenSize.width - windowSize.width ) / 2;
-  newOrigin.y = ( screenSize.height - windowSize.height ) / 2;
-#ifdef DEBUG
-  printf("New window origin is (%f, %f)\n", newOrigin.x, newOrigin.y );
-#endif
-    
-  // Set the origin
-  [self setFrameOrigin: newOrigin];
+  savedWindowRect = [self frame];
+  return lw;
 }
 
 - (void)waggle
@@ -135,6 +104,7 @@
   int i = 0, w = 0;
 
   windowRect = [self frame];
+  savedWindowRect = windowRect;
   savedOrigin = windowRect.origin;
   origin = savedOrigin;
   w = windowRect.size.width;
@@ -145,6 +115,11 @@
       [self setFrame: windowRect display: YES];
     }
   [self close];
+}
+
+- (void)restore
+{
+  [self setFrame: savedWindowRect display: YES];
 }
 
 - (BOOL)canBecomeKeyWindow
@@ -172,6 +147,7 @@
 
   windowRect = [self frame];
   windowRect.size = [image size];
+  savedWindowRect = windowRect;
   [self setFrame: windowRect display: NO];
   [loginImageView setImage: image];
   [loginImageView setNeedsDisplay: YES];

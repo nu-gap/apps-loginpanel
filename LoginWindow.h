@@ -42,6 +42,9 @@
     id powerButton;
     id restartButton;
     id usernameText;
+    
+    /** to remember original rect before shrinking */
+    NSRect savedWindowRect;
 }
 - (void)initializeInterface;
 - (void)displayPanel;
@@ -50,4 +53,5 @@
 - (void)displayHostname;
 - (void)waggle;
 - (void)shrink;
+- (void)restore;
 @end
