@@ -29,6 +29,12 @@
 	Actions = (
 	);
 	Outlets = (
+	    hostnameText,
+	    loginImageView,
+	    passwordText,
+	    powerButton,
+	    restartButton,
+	    usernameText
 	);
 	Super = NSWindow;
     };

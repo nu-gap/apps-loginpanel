@@ -36,12 +36,12 @@
 
 @interface LoginWindow : NSWindow
 {
-    id hostnameText;
-    id loginImageView;
-    id passwordText;
-    id powerButton;
-    id restartButton;
-    id usernameText;
+    IBOutlet NSTextField  *hostnameText;
+    IBOutlet NSImageView  *loginImageView;
+    IBOutlet NSTextView   *passwordText;
+    IBOutlet NSButton     *powerButton;
+    IBOutlet NSButton     *restartButton;
+    IBOutlet NSTextField  *usernameText;
     
     /** to remember original rect before shrinking */
     NSRect savedWindowRect;
