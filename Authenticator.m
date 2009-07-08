@@ -41,7 +41,7 @@
 #endif
 
 #include <unistd.h>
-
+#include <sys/wait.h>
 
 @implementation Authenticator
 // Initialization methods
@@ -197,7 +197,7 @@
 
   /* fork ourselves before downgrade...
      vfork blocks the father process */
-  pid = vfork();
+  pid = fork();
   if(pid == 0)
     {
       NSLog(@"user dir: %s", pw->pw_dir);
@@ -219,5 +219,6 @@
       sessioncmd = [NSString stringWithFormat: @"sh %s/.xsession",pw->pw_dir];
       system([sessioncmd cString]);
     }
+  wait(0);
 }
 @end
