@@ -200,6 +200,14 @@
   pid = fork();
   if(pid == 0)
     {
+      int retValue;
+
+      unsetenv("GNUSTEP_USER_ROOT");
+      unsetenv("MAIL");
+      if(setenv("USER", pw->pw_name, YES) < 0)
+	NSLog(@"error setting USER %s", pw->pw_name);
+      if(setenv("LOGNAME", pw->pw_name, YES) < 0)
+	NSLog(@"error setting LOGNAME %s", pw->pw_name);
       NSLog(@"user dir: %s", pw->pw_dir);
       /* change home directory */
       if(setenv("HOME", pw->pw_dir, YES) < 0)
@@ -216,8 +224,15 @@
 	  NSLog(@"Could not switch to user id %@.", username);
 	  exit(0);
 	}
-      sessioncmd = [NSString stringWithFormat: @"sh %s/.xsession",pw->pw_dir];
-      system([sessioncmd cString]);
+      sessioncmd = [NSString stringWithFormat: @"%s/.xsession",pw->pw_dir];
+      //retValue = execl("/bin/sh", "sh", "-c", "env", (char *)NULL);
+      retValue = execl("/bin/sh", "sh", [sessioncmd cString], (char *)NULL);
+      if (retValue < 0)
+      {
+        NSLog(@"an error in the child occoured : %d", errno);
+        perror("exec");
+        exit(-1);
+      }
     }
   wait(0);
 }
