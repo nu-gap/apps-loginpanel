@@ -200,11 +200,14 @@
   pid = vfork();
   if(pid == 0)
     {
+      NSLog(@"user dir: %s", pw->pw_dir);
       /* change home directory */
       if(setenv("HOME", pw->pw_dir, YES) < 0)
       {
         NSLog(@"%d could not switch home to %s", errno, pw->pw_dir);
       }
+      /* change current directory */
+      chdir(pw->pw_dir);
       // Set user and group ids
       if ((initgroups(pw->pw_name, pw->pw_gid) != 0) 
 	  || (setgid(pw->pw_gid) != 0) 
