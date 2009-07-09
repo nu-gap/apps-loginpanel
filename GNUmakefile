@@ -26,11 +26,13 @@ include $(GNUSTEP_MAKEFILES)/common.make
 # The application to be compiled
 APP_NAME = loginpanel
 
+loginpanel_PRINCIPAL_CLASS = LoginApplication
+
 # The Objective-C source files to be compiled
 loginpanel_OBJC_FILES = Authenticator.m \
           loginpanel_main.m LoginImageView.m \
 	  LoginPanelController.m LoginWindow.m\
-          LoginTheme.m 
+          LoginTheme.m LoginApplication.m
 
 # The Resource files to be copied into the app's resources directory
 loginpanel_RESOURCE_FILES = gnustep.tiff\
