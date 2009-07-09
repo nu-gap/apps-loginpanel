@@ -10,6 +10,13 @@
 	);
 	Super = NSObject;
     };
+    LoginApplication = {
+	Actions = (
+	);
+	Outlets = (
+	);
+	Super = NSApplication;
+    };
     LoginPanelController = {
 	Actions = (
 	    "usernameEntered:",
