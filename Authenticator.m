@@ -41,7 +41,15 @@
 #endif
 
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>
+
+#if defined(_POSIX_SOURCE) || defined(SYSV) || defined(SVR4)
+# define killpg(pgrp, sig) kill(-(pgrp), sig)
+#endif
+
+
 
 @implementation Authenticator
 // Initialization methods
@@ -193,15 +201,21 @@
 - (void)startSession
 {
   NSString *sessioncmd;
-  int pid = 0;
-
-  /* fork ourselves before downgrade...
-     vfork blocks the father process */
+  int pid;  
+  
+  /* fork ourselves before downgrade... */
+  pid = 0;
   pid = fork();
   if(pid == 0)
     {
       int retValue;
-
+      
+      if (setsid() == -1)
+        {
+	  perror("Error in setsid: ");
+	}
+      setlogin(pw->pw_name);
+      
       unsetenv("GNUSTEP_USER_ROOT");
       unsetenv("MAIL");
       if(setenv("USER", pw->pw_name, YES) < 0)
@@ -234,6 +248,34 @@
         exit(-1);
       }
     }
-  wait(0);
+  pid = wait(0);
+  NSLog(@"group PID: %d", pid);
+  if (killpg (pid, SIGTERM) == -1)
+    {
+      switch (errno)
+        {
+	  case ESRCH:
+	    break;
+	  case EINVAL:
+	    NSLog(@"we tried to murder with an invalid signal");
+	  case EPERM:
+            NSLog(@"we did not murder our children strong enough");
+
+        }
+    }
+  if (killpg (pid, SIGKILL) == -1)
+    {
+      switch (errno)
+        {
+	  case ESRCH:
+	    break;
+	  case EINVAL:
+	    NSLog(@"we tried to murder with an invalid signal");
+	  case EPERM:
+            NSLog(@"we did not murder our children strong enough");
+
+        }
+    }
+
 }
 @end

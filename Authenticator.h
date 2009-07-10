@@ -38,7 +38,6 @@
 
 #include <pwd.h>
 
-
 @interface Authenticator : NSObject
 {
     NSString *username;
