@@ -38,6 +38,14 @@
 #import <gscrypt/GSPam.h>
 #endif
 
+/* Signal Handlers */
+void catchQuittingSignal(int sig)
+{
+  NSLog(@"catchQuittingSignal: %d", sig);
+  //  [self handleQuittingSignal: sig];
+  exit(0);
+}
+
 @implementation LoginPanelController
 - (id)init
 {
@@ -69,6 +77,11 @@
   origin.x = -1000;
   origin.y = -1000;
   [[NSApp iconWindow] setFrameOrigin: origin];
+
+  signal(SIGQUIT, catchQuittingSignal);
+  signal(SIGKILL, catchQuittingSignal);
+  signal(SIGHUP, catchQuittingSignal);
+  signal(SIGTERM, catchQuittingSignal);
 }
 
 - (void)initialize
@@ -204,6 +217,13 @@
     }
   [infoPanel makeKeyAndOrderFront: self];
 }
+
+
+- (void) handleQuittingSignal: (int) sig
+{
+  NSLog(@"somebody is killing me.... %d", sig);
+}
+
 @end
 
 

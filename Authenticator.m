@@ -45,6 +45,8 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#include <grp.h>
+
 #if defined(_POSIX_SOURCE) || defined(SYSV) || defined(SVR4)
 # define killpg(pgrp, sig) kill(-(pgrp), sig)
 #endif
@@ -128,7 +130,7 @@
 
       userNameWithColon = [username stringByAppendingString:@":"];
       userNameLen = [userNameWithColon length];
-      NSLog(@"password: %@", password);
+      //      NSLog(@"password: %@", password);
 
       pwdFileStr = [NSString stringWithContentsOfFile:passwordFilePath];
       if ([pwdFileStr length] == 0)
@@ -138,7 +140,7 @@
       enu = [usersArray objectEnumerator];
       while((userLine = [enu nextObject]) && cryptedPwdFromFile == nil)
         {
-	  NSLog(@"line %@", userLine);
+	  //	  NSLog(@"line %@", userLine);
 	  if ([userLine length] > userNameLen)
 	    {
 	     if ([userLine compare: userNameWithColon options:NSLiteralSearch
@@ -201,12 +203,13 @@
 - (void)startSession
 {
   NSString *sessioncmd;
+  int clientPid;
   int pid;  
   
   /* fork ourselves before downgrade... */
-  pid = 0;
-  pid = fork();
-  if(pid == 0)
+  clientPid = 0;
+  clientPid = fork();
+  if(clientPid == 0)
     {
       int retValue;
       
@@ -215,7 +218,11 @@
 	  perror("Error in setsid: ");
 	}
       setlogin(pw->pw_name);
-      
+
+      //      setpgid(clientPid, clientPid);
+      setpgrp();
+      NSLog(@"group process id: %d", getpgrp());
+
       unsetenv("GNUSTEP_USER_ROOT");
       unsetenv("MAIL");
       if(setenv("USER", pw->pw_name, YES) < 0)
@@ -248,21 +255,34 @@
         exit(-1);
       }
     }
+  NSLog(@"client PID: %d", clientPid);
   pid = wait(0);
-  NSLog(@"group PID: %d", pid);
+  while (pid != clientPid)
+    {
+       NSLog(@"group PID: %d", pid);
+       pid = wait(0);
+    }
+  NSLog(@"finally %d = %d", clientPid, pid);
+ 
   if (killpg (pid, SIGTERM) == -1)
     {
       switch (errno)
         {
 	  case ESRCH:
+	    NSLog(@"no process found in pgrp %d", pid);
 	    break;
 	  case EINVAL:
 	    NSLog(@"we tried to murder with an invalid signal");
+	    break;
 	  case EPERM:
             NSLog(@"we did not murder our children strong enough");
+	    break;
+	default:
+	  NSLog(@"error while sig-terming child");
 
         }
     }
+  NSLog(@" client did not term...");
   if (killpg (pid, SIGKILL) == -1)
     {
       switch (errno)

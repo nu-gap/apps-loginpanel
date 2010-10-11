@@ -55,4 +55,5 @@
 - (void)rejectEntries;
 - (void)logUserIn;
 - (void)showInfo: (id)sender;
+
 @end

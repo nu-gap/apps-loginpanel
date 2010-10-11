@@ -1,3 +1,11 @@
 {
-  NSIcon = "loginicon.tiff";
+    ApplicationDescription = "No description avaliable!";
+    ApplicationName = loginpanel;
+    ApplicationRelease = 0.1;
+    Copyright = "Copyright (C) 200x";
+    CopyrightDescription = "Released under ...";
+    FullVersionID = 0.1;
+    NSExecutable = loginpanel;
+    NSPrincipalClass = NSApplication;
+    NSRole = Application;
 }

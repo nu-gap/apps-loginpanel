@@ -3,10 +3,10 @@
 
    main function.
 
-   Copyright (C) 2000 Gregory John Casamento 
+   Copyright (C) 2000-2010 Free Software Foundation
 
-   Author:  Gregory John Casamento <greg_casamento@yahoo.com>
-   Date: 2000
+   Author: Gregory John Casamento <greg_casamento@yahoo.com>
+           Riccardo Mottola
    
    This file is part of the GNUstep Application Project.
 
@@ -32,6 +32,31 @@
 
 #import <AppKit/AppKit.h>
 
+int startXServer() {
+  int serverPid;
+  char *serverArgs[] = { "X", NULL };
+
+
+  printf("server: %s\n", serverArgs[0]);
+
+  serverPid = vfork();
+  if (serverPid == -1)
+    return -1;
+
+  if (serverPid == 0)
+    {
+      printf("child execv'ing\n");
+      execv("/usr/bin/X", serverArgs);
+    }
+
+  printf("father waitingi\n");
+  sleep(2); 
+  return serverPid;
+}
+
 int main(int argc, const char *argv[]) {
+   printf("starting...\n");
+   startXServer();
+   printf("started...\n");
    return NSApplicationMain(argc, argv);
 }
