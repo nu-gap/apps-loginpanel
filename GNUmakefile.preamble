@@ -21,5 +21,11 @@ ADDITIONAL_INCLUDE_DIRS +=
 ADDITIONAL_LIB_DIRS += 
 
 # Additional GUI libraries to link
+ifneq ($(findstring openbsd, $(GNUSTEP_TARGET_OS)), openbsd)
 ADDITIONAL_GUI_LIBS += -lcrypt
+endif
+
+ifeq ($(have-pam), yes)
+ADDITIONAL_CPPFLAGS += -DHAVE_PAM=1
+endif
 
