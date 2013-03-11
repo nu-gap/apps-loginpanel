@@ -6,3 +6,5 @@
 	  verified variable only necessary when HAVE_PAM
 	* LoginWindow.m
 	  unsigned int -> NSUInteger
+	* loginpanel_main.m
+	  include missing header

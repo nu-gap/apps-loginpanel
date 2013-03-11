@@ -30,7 +30,10 @@
    USA
 */
 
+#include <unistd.h>
+
 #import <AppKit/AppKit.h>
+
 
 int startXServer() {
   int serverPid;
