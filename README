@@ -8,6 +8,10 @@ why it shouldn't run on other UNIX or UNIX-like systems using GNUstep.
 System Requirements:
 Linux, gscrypt, GNUstep
 
+to use PAM for authentication, run make like:
+make have-pam=yes
+
+
 Change History
 11/2000
 

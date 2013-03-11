@@ -12,3 +12,5 @@
 	  add parameter have-pam, set it to yes, when you
 	  want to use pam for authentication, and do not link
 	  against -lcrypto on OpenBSD
+	* README
+	  add note about have-pam
