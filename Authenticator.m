@@ -31,10 +31,6 @@
 
 #import "Authenticator.h"
 
-#if defined(GNUSTEP)
-#include <security/pam_appl.h>
-#endif
-
 /* needed on linux to get crypt from unistd */
 #ifdef __linux__
 #define _XOPEN_SOURCE
@@ -219,9 +215,9 @@
 	}
       setlogin(pw->pw_name);
 
-      //      setpgid(clientPid, clientPid);
-      setpgrp();
-      NSLog(@"group process id: %d", getpgrp());
+      setpgid(clientPid, clientPid);
+      //setpgrp();
+      NSLog(@"group process id: %d", getpgid(clientPid));
 
       unsetenv("GNUSTEP_USER_ROOT");
       unsetenv("MAIL");

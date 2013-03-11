@@ -30,19 +30,17 @@
 
 #import <AppKit/AppKit.h>
 
-#if defined(GNUSTEP)
-#import <security/pam_appl.h>
+#ifdef HAVE_PAM
+#include <security/pam_appl.h>
 #else
-#import <pwd.h>
-#endif
-
 #include <pwd.h>
+#endif
 
 @interface Authenticator : NSObject
 {
     NSString *username;
     NSString *password;
-#if defined(GNUSTEP)
+#ifdef HAVE_PAM
     pam_handle_t *handle;
 #endif
     struct passwd *pw;

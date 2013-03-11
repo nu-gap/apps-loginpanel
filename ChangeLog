@@ -1,0 +1,4 @@
+2013-03-11: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
+	* Authenticator.[h|m]
+	  fix header inclusion for pam, and use setpgid() instead
+	  of setpgrp()
