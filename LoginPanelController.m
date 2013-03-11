@@ -93,7 +93,9 @@ void catchQuittingSignal(int sig)
 - (void)passwordEntered:(id)sender
 {
   char *pwstring = 0;
+#ifdef HAVE_PAM
   BOOL verified = NO;
+#endif
   
   pwstring = (char *)[[passwordField stringValue] cString];
 #ifdef DEBUG 

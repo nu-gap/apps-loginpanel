@@ -2,3 +2,5 @@
 	* Authenticator.[h|m]
 	  fix header inclusion for pam, and use setpgid() instead
 	  of setpgrp()
+	* LoginPanelController.m
+	  verified variable only necessary when HAVE_PAM
