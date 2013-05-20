@@ -7,6 +7,11 @@
 	  make the power button work on OpenBSD
 	* English.lproj/InfoPanel.gorm
 	  make the InfoPanel look a little bit more nice
+	* Authenticator.m
+	  try harder to find apropriate script to be run after
+	  login, in the following order: 
+	  ~.xsession, ~.xinitrc, /etc/X11/xinit/xinitrc, 
+	  /etc/X11/xdm/Xsession
 
 2013-03-11: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
 	* Authenticator.[h|m]

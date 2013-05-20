@@ -52,6 +52,10 @@
 #include <bsd_auth.h>
 #endif
 
+// for stat()
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 @implementation Authenticator
 // Initialization methods
@@ -213,7 +217,6 @@
 
 - (void)startSession
 {
-  NSString *sessioncmd;
   int clientPid;
   int pid;  
   
@@ -223,6 +226,7 @@
   if(clientPid == 0)
     {
       int retValue;
+      char sessioncmd[128];
       
       if (setsid() == -1)
         {
@@ -256,9 +260,19 @@
 	  NSLog(@"Could not switch to user id %@.", username);
 	  exit(0);
 	}
-      sessioncmd = [NSString stringWithFormat: @"%s/.xsession",pw->pw_dir];
-      //retValue = execl("/bin/sh", "sh", "-c", "env", (char *)NULL);
-      retValue = execl("/bin/sh", "sh", [sessioncmd cString], (char *)NULL);
+      // try to find an appropriate script to be run after login
+      snprintf(sessioncmd, sizeof(sessioncmd), "%s/.xsession", pw->pw_dir);
+      if (stat(sessioncmd, NULL) != 0)
+        snprintf(sessioncmd, sizeof(sessioncmd), "%s/.xinitrc", pw->pw_dir);
+      if (stat(sessioncmd, NULL) != 0)
+        snprintf(sessioncmd, sizeof(sessioncmd), "/etc/X11/xinit/xinitrc");
+      if (stat(sessioncmd, NULL) != 0)
+        snprintf(sessioncmd, sizeof(sessioncmd), "/etc/X11/xdm/Xsession");
+      if (stat(sessioncmd, NULL) != 0)
+        retValue = execl("/bin/sh", "sh", sessioncmd, (char *)NULL);
+      else
+        retValue = execl("/bin/sh", "sh", (char *)NULL);
+
       if (retValue < 0)
       {
         NSLog(@"an error in the child occoured : %d", errno);
