@@ -5,6 +5,8 @@
 	  out whether the username/password is correct
 	* LoginPanelController.m
 	  make the power button work on OpenBSD
+	* English.lproj/InfoPanel.gorm
+	  make the InfoPanel look a little bit more nice
 
 2013-03-11: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
 	* Authenticator.[h|m]
