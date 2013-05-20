@@ -99,7 +99,6 @@ void catchQuittingSignal(int sig)
   
   pwstring = (char *)[[passwordField stringValue] cString];
 #ifdef DEBUG 
-  printf("Password: %s\n", pwstring );
   printf("Verifying login...\n");
 #endif
 

@@ -105,7 +105,6 @@
 - (void)setPassword: (NSString *)pass
 {
   password = pass;
-  NSLog(@"Setting password to: %@", password);
 }
 
 - (NSString *)username

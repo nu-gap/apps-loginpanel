@@ -12,6 +12,8 @@
 	  login, in the following order: 
 	  ~.xsession, ~.xinitrc, /etc/X11/xinit/xinitrc, 
 	  /etc/X11/xdm/Xsession
+	* LoginPanelController.m, Authenticator.m
+	  do not print the password
 
 2013-03-11: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
 	* Authenticator.[h|m]
