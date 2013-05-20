@@ -3,6 +3,8 @@
 	  add compilation parameter: have-bsd-auth
 	* if HAVE_BSD_AUTH, then use auth_userokay to figure
 	  out whether the username/password is correct
+	* LoginPanelController.m
+	  make the power button work on OpenBSD
 
 2013-03-11: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
 	* Authenticator.[h|m]

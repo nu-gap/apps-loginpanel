@@ -141,7 +141,11 @@ void catchQuittingSignal(int sig)
 #ifdef DEBUG
   puts("Powering down...");
 #endif
+#ifdef __linux__
   if(system("/sbin/shutdown -g0")) NSLog(@"Problem shutting down");
+#else
+  if(system("/sbin/halt -p")) NSLog(@"Problem shutting down");
+#endif
 }
 
 - (void)restartButton:(id)sender
