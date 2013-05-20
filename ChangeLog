@@ -1,3 +1,9 @@
+2013-05-20: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
+	* GNUmakefile.preamble
+	  add compilation parameter: have-bsd-auth
+	* if HAVE_BSD_AUTH, then use auth_userokay to figure
+	  out whether the username/password is correct
+
 2013-03-11: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
 	* Authenticator.[h|m]
 	  fix header inclusion for pam, and use setpgid() instead

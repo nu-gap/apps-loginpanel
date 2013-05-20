@@ -47,6 +47,10 @@
 # define killpg(pgrp, sig) kill(-(pgrp), sig)
 #endif
 
+#if HAVE_BSD_AUTH
+#include <login_cap.h>
+#include <bsd_auth.h>
+#endif
 
 
 @implementation Authenticator
@@ -114,6 +118,17 @@
 - (BOOL)isPasswordCorrect
 {
   NSLog(@"Verifying... %@", username);
+
+#if HAVE_BSD_AUTH
+  BOOL ret;
+
+  ret = (BOOL)auth_userokay((char *)[username cStringUsingEncoding:NSUTF8StringEncoding] ,NULL,NULL,
+			(char *)[password cStringUsingEncoding:NSUTF8StringEncoding]);  
+  pw = getpwnam([username cString]);
+  return ret;
+#endif
+
+
   if(YES)  // we should do this if we have a master password file
     {
       NSString *pwdFileStr;

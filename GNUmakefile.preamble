@@ -29,3 +29,6 @@ ifeq ($(have-pam), yes)
 ADDITIONAL_CPPFLAGS += -DHAVE_PAM=1
 endif
 
+ifeq ($(have-bsd-auth), yes)
+ADDITIONAL_CPPFLAGS += -DHAVE_BSD_AUTH=1
+endif
