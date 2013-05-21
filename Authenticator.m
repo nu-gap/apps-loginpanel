@@ -47,7 +47,7 @@
 # define killpg(pgrp, sig) kill(-(pgrp), sig)
 #endif
 
-#if HAVE_BSD_AUTH
+#if HAVE_OPENBSD_AUTH
 #include <login_cap.h>
 #include <bsd_auth.h>
 #endif
@@ -122,7 +122,7 @@
 {
   NSLog(@"Verifying... %@", username);
 
-#if HAVE_BSD_AUTH
+#if HAVE_OPENBSD_AUTH
   BOOL ret;
 
   ret = (BOOL)auth_userokay((char *)[username cStringUsingEncoding:NSUTF8StringEncoding] ,NULL,NULL,

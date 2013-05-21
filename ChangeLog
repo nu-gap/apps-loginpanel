@@ -1,3 +1,7 @@
+2013-05-21: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
+	* GNUmakefile.preamble, Authenticator.m
+	  rename have-bsd-auth to have-openbsd-auth
+
 2013-05-20: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
 	* GNUmakefile.preamble
 	  add compilation parameter: have-bsd-auth
