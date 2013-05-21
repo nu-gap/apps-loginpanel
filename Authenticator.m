@@ -186,8 +186,7 @@
 	      recrypted = [NSString stringWithCString:crypt([password cString],
 	      [salt cString])];
 	      NSLog(@"recrypted: %@", recrypted);
-	      if ([recrypted compare:cryptedPwdFromFile options:NSLiteralSearch]
-	      == NSOrderedSame)
+	      if ([recrypted compare:cryptedPwdFromFile options:NSLiteralSearch] == NSOrderedSame)
 	        {
 		  NSLog(@"Equal");
 		  pw = getpwnam([username cString]);
@@ -225,8 +224,9 @@
   if(clientPid == 0)
     {
       int retValue;
-      char sessioncmd[128];
-      
+      char sessioncmd[MAXPATHLEN];
+      struct stat stBuff;
+
       if (setsid() == -1)
         {
 	  perror("Error in setsid: ");
@@ -260,17 +260,28 @@
 	  exit(0);
 	}
       // try to find an appropriate script to be run after login
+      // FIXME - RM : this code should all be rewriten using NS* classes !!!
       snprintf(sessioncmd, sizeof(sessioncmd), "%s/.xsession", pw->pw_dir);
-      if (stat(sessioncmd, NULL) != 0)
+      printf("trying: %s\n", sessioncmd);
+      if (stat(sessioncmd, &stBuff) != 0)
         snprintf(sessioncmd, sizeof(sessioncmd), "%s/.xinitrc", pw->pw_dir);
-      if (stat(sessioncmd, NULL) != 0)
+      printf("trying: %s\n", sessioncmd);
+      if (stat(sessioncmd, &stBuff) != 0)
         snprintf(sessioncmd, sizeof(sessioncmd), "/etc/X11/xinit/xinitrc");
-      if (stat(sessioncmd, NULL) != 0)
+      printf("trying: %s\n", sessioncmd);
+      if (stat(sessioncmd, &stBuff) != 0)
         snprintf(sessioncmd, sizeof(sessioncmd), "/etc/X11/xdm/Xsession");
-      if (stat(sessioncmd, NULL) != 0)
-        retValue = execl("/bin/sh", "sh", sessioncmd, (char *)NULL);
+      printf("trying: %s\n", sessioncmd);
+      if (stat(sessioncmd, &stBuff) == 0)
+	{
+	  printf("Using session: %s", sessioncmd);
+	  retValue = execl("/bin/sh", "sh", sessioncmd, (char *)NULL);
+	}
       else
-        retValue = execl("/bin/sh", "sh", (char *)NULL);
+	{
+	  printf ("Lost all hope, no session script found.\n");
+	  exit(-1);
+	}
 
       if (retValue < 0)
       {
@@ -315,9 +326,12 @@
 	    break;
 	  case EINVAL:
 	    NSLog(@"we tried to murder with an invalid signal");
+	    break;
 	  case EPERM:
             NSLog(@"we did not murder our children strong enough");
-
+	    break;
+	default:
+	  NSLog(@"Unknown error: %d", errno);
         }
     }
 

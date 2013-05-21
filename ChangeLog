@@ -1,3 +1,8 @@
+2013-05-21 Riccardo Mottola <rm@gnu.org>
+
+	* Authenticator.m
+	Fix last stat case, do not pass a NULL argument to stat or linux complains.
+
 2013-05-21: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
 	* GNUmakefile.preamble, Authenticator.m
 	  rename have-bsd-auth to have-openbsd-auth
