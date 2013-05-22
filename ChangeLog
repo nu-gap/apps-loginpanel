@@ -13,6 +13,9 @@
         * GNUmakefile.preamble
           ADDITIONAL_INCLUDE_DIRS and ADDITIONAL_LDFLAGS, to link 
           against libX11, and include X11/xlib.h
+	* add loginpaneld.m, implementing a deamon restarting the
+	  login panel when it dies
+	* GNUmakefile, build loginpaneld
 
 2013-05-21 Riccardo Mottola <rm@gnu.org>
 
