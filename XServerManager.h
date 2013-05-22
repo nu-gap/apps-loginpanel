@@ -28,7 +28,7 @@
 #import <AppKit/AppKit.h>
 
 #ifndef DEFAULT_XSERVER
-#define DEFAULT_XSERVER /usr/X11R6/bin/X
+#define DEFAULT_XSERVER {"/usr/X11R6/bin/X", NULL}
 #endif
 
 @interface XServerManager : NSObject

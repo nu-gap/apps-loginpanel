@@ -74,7 +74,7 @@
 
 -(BOOL) startXServer
 {
-  char *xServer[] = {"DEFAULT_XSERVER", NULL};
+  char *xServer[] = DEFAULT_XSERVER;
   serverPID = fork();
 
   if (serverPID == -1)
@@ -82,7 +82,7 @@
 
   if (serverPID == 0)
     {
-      NSLog(@"spawning X Server");
+      NSLog(@"spawning X Server: %s", xServer[0]);
       execvp(xServer[0], xServer);
     }
 

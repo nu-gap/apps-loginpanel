@@ -3,6 +3,9 @@
 	  added singleton class, responsible to spawn/kill the X server
 	* GNUmakefile
 	  compile new class above
+	* loginpanel_main.m
+	  remove the startXServer function, and make use of the
+	  XServerManager class
 
 2013-05-21 Riccardo Mottola <rm@gnu.org>
 

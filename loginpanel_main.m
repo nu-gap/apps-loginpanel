@@ -33,33 +33,13 @@
 #include <unistd.h>
 
 #import <AppKit/AppKit.h>
+#import <XServerManager.h>
 
-
-int startXServer() {
-  int serverPid;
-  char *serverArgs[] = { "X", NULL };
-
-
-  printf("server: %s\n", serverArgs[0]);
-
-  serverPid = vfork();
-  if (serverPid == -1)
-    return -1;
-
-  if (serverPid == 0)
-    {
-      printf("child execv'ing\n");
-      execv("/usr/bin/X", serverArgs);
-    }
-
-  printf("father waitingi\n");
-  sleep(2); 
-  return serverPid;
-}
 
 int main(int argc, const char *argv[]) {
-   printf("starting...\n");
-   startXServer();
-   printf("started...\n");
+   XServerManager *XManager = [XServerManager sharedXServerManager];
+
+   [XManager startXServer];
+   putenv("DISPLAY=:0.0");
    return NSApplicationMain(argc, argv);
 }
