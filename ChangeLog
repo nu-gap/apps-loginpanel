@@ -1,3 +1,9 @@
+2013-05-22: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
+	* XServerManager.[h|m]
+	  added singleton class, responsible to spawn/kill the X server
+	* GNUmakefile
+	  compile new class above
+
 2013-05-21 Riccardo Mottola <rm@gnu.org>
 
 	* Authenticator.m

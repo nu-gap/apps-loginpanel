@@ -32,7 +32,7 @@ loginpanel_PRINCIPAL_CLASS = LoginApplication
 loginpanel_OBJC_FILES = Authenticator.m \
           loginpanel_main.m LoginImageView.m \
 	  LoginPanelController.m LoginWindow.m\
-          LoginTheme.m LoginApplication.m
+          LoginTheme.m LoginApplication.m XServerManager.m
 
 # The Resource files to be copied into the app's resources directory
 loginpanel_RESOURCE_FILES = gnustep.tiff\
