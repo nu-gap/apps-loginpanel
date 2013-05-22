@@ -12,13 +12,13 @@ ADDITIONAL_OBJCFLAGS +=
 ADDITIONAL_CFLAGS += 
 
 # Additional flags to pass to the linker
-ADDITIONAL_LDFLAGS += "-L/usr/X11R6/lib -lX11" 
+ADDITIONAL_LDFLAGS += 
 
 # Additional include directories the compiler should search
-ADDITIONAL_INCLUDE_DIRS += "-I/usr/X11R6/include"
+ADDITIONAL_INCLUDE_DIRS += -I/usr/X11R6/include
 
 # Additional library directories the linker should search
-ADDITIONAL_LIB_DIRS += 
+ADDITIONAL_LIB_DIRS += -L/usr/X11R6/lib -lX11
 
 # Additional GUI libraries to link
 ifneq ($(findstring openbsd, $(GNUSTEP_TARGET_OS)), openbsd)
