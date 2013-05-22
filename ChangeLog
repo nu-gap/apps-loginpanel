@@ -6,6 +6,13 @@
 	* loginpanel_main.m
 	  remove the startXServer function, and make use of the
 	  XServerManager class
+	* Authenticator.m
+	  use the XServerManager class to shut down the XServer
+	* XServerManager.[h|m]
+	  add more functionality
+        * GNUmakefile.preamble
+          ADDITIONAL_INCLUDE_DIRS and ADDITIONAL_LDFLAGS, to link 
+          against libX11, and include X11/xlib.h
 
 2013-05-21 Riccardo Mottola <rm@gnu.org>
 

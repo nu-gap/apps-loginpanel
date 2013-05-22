@@ -30,6 +30,7 @@
 /* Authenticator.m created by me on Wed 17-Nov-1999 */
 
 #import "Authenticator.h"
+#import "XServerManager.h"
 
 /* needed on linux to get crypt from unistd */
 #ifdef __linux__
@@ -42,10 +43,6 @@
 #include <signal.h>
 
 #include <grp.h>
-
-#if defined(_POSIX_SOURCE) || defined(SYSV) || defined(SVR4)
-# define killpg(pgrp, sig) kill(-(pgrp), sig)
-#endif
 
 #if HAVE_OPENBSD_AUTH
 #include <login_cap.h>
@@ -217,6 +214,7 @@
 {
   int clientPid;
   int pid;  
+  XServerManager *XManager = [XServerManager sharedXServerManager];
   
   /* fork ourselves before downgrade... */
   clientPid = 0;
@@ -234,7 +232,6 @@
       setlogin(pw->pw_name);
 
       setpgid(clientPid, clientPid);
-      //setpgrp();
       NSLog(@"group process id: %d", getpgid(clientPid));
 
       unsetenv("GNUSTEP_USER_ROOT");
@@ -247,7 +244,7 @@
       /* change home directory */
       if(setenv("HOME", pw->pw_dir, YES) < 0)
       {
-        NSLog(@"%d could not switch home to %s", errno, pw->pw_dir);
+        NSLog(@"%d could not switch HOME to %s", errno, pw->pw_dir);
       }
       /* change current directory */
       chdir(pw->pw_dir);
@@ -299,41 +296,6 @@
     }
   NSLog(@"finally %d = %d", clientPid, pid);
  
-  if (killpg (pid, SIGTERM) == -1)
-    {
-      switch (errno)
-        {
-	  case ESRCH:
-	    NSLog(@"no process found in pgrp %d", pid);
-	    break;
-	  case EINVAL:
-	    NSLog(@"we tried to murder with an invalid signal");
-	    break;
-	  case EPERM:
-            NSLog(@"we did not murder our children strong enough");
-	    break;
-	default:
-	  NSLog(@"error while sig-terming child");
-
-        }
-    }
-  NSLog(@" client did not term...");
-  if (killpg (pid, SIGKILL) == -1)
-    {
-      switch (errno)
-        {
-	  case ESRCH:
-	    break;
-	  case EINVAL:
-	    NSLog(@"we tried to murder with an invalid signal");
-	    break;
-	  case EPERM:
-            NSLog(@"we did not murder our children strong enough");
-	    break;
-	default:
-	  NSLog(@"Unknown error: %d", errno);
-        }
-    }
-
+  [XManager stopXServer];
 }
 @end

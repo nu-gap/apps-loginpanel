@@ -28,6 +28,7 @@
 #import "XServerManager.h"
 
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <signal.h>
 
@@ -87,20 +88,30 @@
     }
 
   NSLog(@"loginpanel waiting for X Server");
-  sleep(2);
 
-  return YES;
+  return [self waitForServer];
 }
 
 -(BOOL) stopXServer
 {
   int counter;
-  int signal = SIGTERM;
+  int sig = SIGTERM;
   BOOL result = NO;
+
+  // ignore signals
+  signal(SIGQUIT, SIG_IGN);
+  signal(SIGINT, SIG_IGN);
+  signal(SIGHUP, SIG_IGN);
+  signal(SIGPIPE, SIG_IGN);
+  signal(SIGTERM, SIG_DFL);
+  signal(SIGKILL, SIG_DFL);
+  signal(SIGALRM, SIG_DFL);
+
+  XCloseDisplay(Dpy);
 
   for (counter = 0;counter < 4;counter++)
     {
-      if (killpg (serverPID, signal) == -1)
+      if (killpg (serverPID, sig) == -1)
         {
           switch (errno)
 	    {
@@ -116,7 +127,8 @@
 	      default:
 	        NSLog(@"error while terminating child");
 	    }
-	  signal = SIGKILL;
+	  sig = SIGKILL;
+	  [self serverTimeout:3 showMessage:"waiting for server to die"];
         }
       else
 	{
@@ -126,6 +138,53 @@
 	}
     }
   return result;
+}
+
+- (BOOL) waitForServer
+{
+  int     ncycles = 120;
+  int     cycles;
+
+  for (cycles = 0; cycles < ncycles; cycles++)
+    {
+       if((Dpy = XOpenDisplay(":0.0")))
+              return YES;
+       if(![self serverTimeout:1 showMessage:"X server ready"])
+              break;
+     }
+     NSLog(@"failure while waiting for X server to start");
+
+    return NO;
+}
+
+- (BOOL) serverTimeout:(int)timeout showMessage:(char *)text
+{
+  int        i = 0;
+  int pidfound = -1;
+  static char *lasttext;
+
+    for(;;)
+      {
+         pidfound = waitpid(serverPID, NULL, WNOHANG);
+         if (pidfound == serverPID)
+              break;
+         if (timeout)
+           {
+             if (i == 0 && text != lasttext)
+                NSLog(@"waiting for %s", text);
+             else
+                NSLog(@".");
+           }
+         if (timeout)
+           sleep(1);
+         if (++i > timeout)
+           break;
+       }
+    if (i > 0)
+      NSLog(@"\n");
+
+    lasttext = text;
+    return (serverPID != pidfound);
 }
 
 @end

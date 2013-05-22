@@ -27,6 +27,8 @@
 
 #import <AppKit/AppKit.h>
 
+#include <X11/Xlib.h>
+
 #ifndef DEFAULT_XSERVER
 #define DEFAULT_XSERVER {"/usr/X11R6/bin/X", NULL}
 #endif
@@ -34,6 +36,7 @@
 @interface XServerManager : NSObject
 {
   pid_t serverPID;
+  Display *Dpy;
 }
 
 // Initialization Methods
