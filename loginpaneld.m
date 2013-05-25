@@ -32,7 +32,7 @@
 #import <Foundation/Foundation.h>
 
 int main(int argc, const char *argv[]) {
-  char *loginpanel[] = {"loginpanel", NULL};
+  char *loginpanel[] = {"loginpanel", "-GSX11HandlesWindowDecorations", "NO", NULL};
   pid_t panelPID;
 
   while (1)
@@ -45,7 +45,7 @@ int main(int argc, const char *argv[]) {
 	  case -1:
 	    break;
 	  default:
-	    waitpid(panelPID, NULL, NULL);
+	    waitpid(panelPID, NULL, 0);
 	}
     }
 

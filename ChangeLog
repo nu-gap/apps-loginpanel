@@ -1,3 +1,7 @@
+2013-05-25: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
+	* loginpaneld.m
+	  call waitpid() correctly
+	  call loginpanel with -GSX11HandlesWindowDecorations NO
 2013-05-22: Sebastian Reitenbach <sebastia@l00-bugdead-prods.de>
 	* XServerManager.[h|m]
 	  added singleton class, responsible to spawn/kill the X server
