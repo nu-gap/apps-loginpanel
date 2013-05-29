@@ -3,12 +3,12 @@
 
    Controller class which handles all activity in the loginpanel.
 
-   Copyright (C) 2000 Gregory John Casamento 
+   Copyright (C) 2000 Gregory John Casamento
+                 2013 Riccardo Mottola
 
    Author:  Gregory John Casamento <greg_casamento@yahoo.com>
    Date: 2000
    
-   This file is part of GNUstep.
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public
@@ -54,6 +54,8 @@
 - (void)usernameEntered:(id)sender;
 - (void)rejectEntries;
 - (void)logUserIn;
+- (void)startSession;
+
 - (void)showInfo: (id)sender;
 
 @end

@@ -54,5 +54,6 @@
 - (NSString *)password;
 - (BOOL)isPasswordCorrect;
 - (void)setEnvironment;
-- (void)startSession;
+- (struct passwd *)getPasswordEntity;
+
 @end

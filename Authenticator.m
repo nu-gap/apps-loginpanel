@@ -3,7 +3,7 @@
 
    Class to allow loginpanel to authenticate users
 
-   Copyright (C) 2000-2009 GNUstep Application Project
+   Copyright (C) 2000-2013 GNUstep Application Project
 
    Author:  Gregory John Casamento <borgheron@yahoo.com>
    Date: 2000
@@ -30,16 +30,14 @@
 /* Authenticator.m created by me on Wed 17-Nov-1999 */
 
 #import "Authenticator.h"
-#import "XServerManager.h"
 
 /* needed on linux to get crypt from unistd */
 #ifdef __linux__
 #define _XOPEN_SOURCE
 #endif
 
-#include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>
+#include <unistd.h>
 #include <signal.h>
 
 #include <grp.h>
@@ -48,10 +46,6 @@
 #include <login_cap.h>
 #include <bsd_auth.h>
 #endif
-
-// for stat()
-#include <sys/stat.h>
-#include <fcntl.h>
 
 
 @implementation Authenticator
@@ -113,6 +107,12 @@
 {
   return password;
 }
+
+- (struct passwd *)getPasswordEntity
+{
+  return pw;
+}
+
 
 /** perform the actual password verification */
 - (BOOL)isPasswordCorrect
@@ -210,92 +210,5 @@
   chdir(pw->pw_dir);
 }
 
-- (void)startSession
-{
-  int clientPid;
-  int pid;  
-  XServerManager *XManager = [XServerManager sharedXServerManager];
-  
-  /* fork ourselves before downgrade... */
-  clientPid = 0;
-  clientPid = fork();
-  if(clientPid == 0)
-    {
-      int retValue;
-      char sessioncmd[MAXPATHLEN];
-      struct stat stBuff;
 
-      if (setsid() == -1)
-        {
-	  perror("Error in setsid: ");
-	}
-      setlogin(pw->pw_name);
-
-      setpgid(clientPid, clientPid);
-      NSLog(@"group process id: %d", getpgid(clientPid));
-
-      unsetenv("GNUSTEP_USER_ROOT");
-      unsetenv("MAIL");
-      if(setenv("USER", pw->pw_name, YES) < 0)
-	NSLog(@"error setting USER %s", pw->pw_name);
-      if(setenv("LOGNAME", pw->pw_name, YES) < 0)
-	NSLog(@"error setting LOGNAME %s", pw->pw_name);
-      NSLog(@"user dir: %s", pw->pw_dir);
-      /* change home directory */
-      if(setenv("HOME", pw->pw_dir, YES) < 0)
-      {
-        NSLog(@"%d could not switch HOME to %s", errno, pw->pw_dir);
-      }
-      /* change current directory */
-      chdir(pw->pw_dir);
-      // Set user and group ids
-      if ((initgroups(pw->pw_name, pw->pw_gid) != 0) 
-	  || (setgid(pw->pw_gid) != 0) 
-	  || (setuid(pw->pw_uid) != 0)) 
-	{
-	  NSLog(@"Could not switch to user id %@.", username);
-	  exit(0);
-	}
-      // try to find an appropriate script to be run after login
-      // FIXME - RM : this code should all be rewriten using NS* classes !!!
-      snprintf(sessioncmd, sizeof(sessioncmd), "%s/.xsession", pw->pw_dir);
-      printf("trying: %s\n", sessioncmd);
-      if (stat(sessioncmd, &stBuff) != 0)
-        snprintf(sessioncmd, sizeof(sessioncmd), "%s/.xinitrc", pw->pw_dir);
-      printf("trying: %s\n", sessioncmd);
-      if (stat(sessioncmd, &stBuff) != 0)
-        snprintf(sessioncmd, sizeof(sessioncmd), "/etc/X11/xinit/xinitrc");
-      printf("trying: %s\n", sessioncmd);
-      if (stat(sessioncmd, &stBuff) != 0)
-        snprintf(sessioncmd, sizeof(sessioncmd), "/etc/X11/xdm/Xsession");
-      printf("trying: %s\n", sessioncmd);
-      if (stat(sessioncmd, &stBuff) == 0)
-	{
-	  printf("Using session: %s", sessioncmd);
-	  retValue = execl("/bin/sh", "sh", sessioncmd, (char *)NULL);
-	}
-      else
-	{
-	  printf ("Lost all hope, no session script found.\n");
-	  exit(-1);
-	}
-
-      if (retValue < 0)
-      {
-        NSLog(@"an error in the child occoured : %d", errno);
-        perror("exec");
-        exit(-1);
-      }
-    }
-  NSLog(@"client PID: %d", clientPid);
-  pid = wait(0);
-  while (pid != clientPid)
-    {
-       NSLog(@"group PID: %d", pid);
-       pid = wait(0);
-    }
-  NSLog(@"finally %d = %d", clientPid, pid);
- 
-  [XManager stopXServer];
-}
 @end
