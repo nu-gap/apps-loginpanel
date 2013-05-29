@@ -49,5 +49,7 @@
 // start and stop the server
 -(BOOL) startXServer;
 -(BOOL) stopXServer;
+-(BOOL) waitForServer;
+- (BOOL) serverTimeout:(int)timeout showMessage:(char *)text;
 
 @end
