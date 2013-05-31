@@ -50,11 +50,8 @@ loginpanel_LOCALIZED_RESOURCE_FILES = \
 
 loginpanel_LANGUAGES = English
 
-TOOL_NAME = loginpaneld
 
-loginpaneld_OBJC_FILES = loginpaneld.m
-
--include GNUmakefile.preamble
+include GNUmakefile.preamble
 include $(GNUSTEP_MAKEFILES)/tool.make
 include $(GNUSTEP_MAKEFILES)/application.make
 -include GNUmakefile.postamble

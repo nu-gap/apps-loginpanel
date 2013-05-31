@@ -30,6 +30,8 @@
    USA
 */
 
+#include <sys/types.h>
+
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 #import "LoginWindow.h"
@@ -47,7 +49,7 @@
     NSUserDefaults *defaults;
 }
 - (void)applicationDidFinishLaunching: (NSNotification *)notification;
-- (void)initialize;
+- (void)initializeInterface;
 - (void)passwordEntered:(id)sender;
 - (void)powerButton:(id)sender;
 - (void)restartButton:(id)sender;
@@ -55,6 +57,9 @@
 - (void)rejectEntries;
 - (void)logUserIn;
 - (void)startSession;
+
+- (void)killProcessGroup:(pid_t)pid;
+- (void)killXClients;
 
 - (void)showInfo: (id)sender;
 

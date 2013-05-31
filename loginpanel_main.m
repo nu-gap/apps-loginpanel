@@ -36,10 +36,7 @@
 #import <XServerManager.h>
 
 
-int main(int argc, const char *argv[]) {
-   XServerManager *XManager = [XServerManager sharedXServerManager];
-
-   [XManager startXServer];
-   putenv("DISPLAY=:0.0");
+int main(int argc, const char *argv[])
+{
    return NSApplicationMain(argc, argv);
 }

@@ -47,6 +47,10 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <grp.h> /* initgroups () */
+
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
 
 /* Signal Handlers */
 void catchQuittingSignal(int sig)
@@ -80,8 +84,8 @@ void catchQuittingSignal(int sig)
 {
   NSPoint origin;
 
-  NSLog(@"");
-  [self initialize];
+  NSLog(@"LoginPanelController: applicationDidFinishLaunching");
+  [self initializeInterface];
 
   // Eliminate the application icon!!
   origin.x = -1000;
@@ -94,7 +98,7 @@ void catchQuittingSignal(int sig)
   signal(SIGTERM, catchQuittingSignal);
 }
 
-- (void)initialize
+- (void)initializeInterface
 {
   [window restore]; 
   [window makeKeyAndOrderFront: self];
@@ -215,7 +219,7 @@ void catchQuittingSignal(int sig)
   [self startSession];
 #endif
   NSLog(@"resetting itself");
-  [self initialize];
+  [self initializeInterface];
 }
 
 - (void)startSession
@@ -223,7 +227,6 @@ void catchQuittingSignal(int sig)
   int clientPid;
   pid_t pid;
   struct passwd *pw;
-  XServerManager *XManager = [XServerManager sharedXServerManager];
   
   pw = [authenticator getPasswordEntity];
 
@@ -306,8 +309,136 @@ void catchQuittingSignal(int sig)
        pid = wait(0);
     }
   NSLog(@"finally %d = %d", clientPid, pid);
- 
-  [XManager stopXServer];
+
+  [self killXClients];
+  [self killProcessGroup:pid];
+}
+
+- (void)killProcessGroup:(pid_t)pid
+{
+  NSLog(@"sending term to %i", pid);
+  if (killpg (pid, SIGTERM) == -1)
+    { 	 
+      switch (errno) 	 
+        { 	 
+        case ESRCH: 	 
+          NSLog(@"no process found in pgrp %d", pid); 	 
+          break; 	 
+        case EINVAL: 	 
+          NSLog(@"we tried to murder with an invalid signal"); 	 
+          break; 	 
+        case EPERM: 	 
+          NSLog(@"we did not murder our children strong enough"); 	 
+          break; 	 
+        default: 	 
+          NSLog(@"error while sig-terming child"); 	 
+	  	 
+        } 	 
+    } 	 
+  NSLog(@" client did not term..., sending kill"); 	 
+  if (killpg (pid, SIGKILL) == -1) 	 
+    { 	 
+      switch (errno) 	 
+        { 	 
+        case ESRCH: 	 
+          break; 	 
+        case EINVAL: 	 
+          NSLog(@"we tried to murder with an invalid signal"); 	 
+          break; 	 
+        case EPERM: 	 
+          NSLog(@"we did not murder our children strong enough"); 	 
+          break; 	 
+        default: 	 
+          NSLog(@"Unknown error: %d", errno); 	 
+        } 	 
+    }
+}
+
+- (void)killXClients
+{
+  Display *disp;
+  Window rootWin;
+  Window parentWin;
+  Window *childrenOfRoot;
+  unsigned int numOfChildren;
+  unsigned int i;
+  Atom atom_NET_WM_PID;
+
+  /* Can we cant it from GNUstep ? */
+  disp = XOpenDisplay(NULL);
+  if (disp)
+    NSLog(@"Got display");
+
+  rootWin = XDefaultRootWindow(disp);
+
+  XQueryTree(disp, rootWin, &rootWin, &parentWin, &childrenOfRoot, &numOfChildren);
+  /*
+  if(1)
+    {
+      for(i = 0; i < numOfChildren; i++)
+        {
+          if(XGetWindowAttributes(disp, childrenOfWin[i], &attr) 
+             && (attr.map_state == IsViewable))
+            childrenOfWin[i] = XmuClientWindow(disp, childrenOfWin[i]);
+          else
+            childrenOfWin[i] = 0;
+        }
+    }
+  */
+  
+  atom_NET_WM_PID = XInternAtom(disp, "_NET_WM_PID", true);
+  if (atom_NET_WM_PID == None)
+    {
+      NSLog(@"XInternAtom failure for _NET_WM_PID");
+      return;
+    }
+
+  for(i = 0; i < numOfChildren; i++)
+    {
+      Window wind;
+      XWindowAttributes attr;
+      int format;
+      unsigned long nItems;
+      unsigned long bytesAfter;
+      unsigned char *props;
+      pid_t clientPID;
+      Atom atomType;
+
+      wind = childrenOfRoot[i];
+
+      XGetWindowProperty(disp, wind, atom_NET_WM_PID, 0, 1, False, AnyPropertyType, &atomType, &format, &nItems, &bytesAfter, &props);
+
+      clientPID = 0;
+      if (props)
+        {
+          NSLog(@"We got some PID");
+          clientPID = (pid_t)*((unsigned long *)props);
+          XFree(props);
+        }
+
+      NSLog(@"Process ID: %ld", (long int)clientPID);
+      if(XGetWindowAttributes(disp, wind, &attr))
+        {
+          char *winName;
+
+          XFetchName(disp, wind, &winName);
+          
+          
+          if (attr.map_state == IsViewable)
+            {
+              NSLog(@"killing %u, %s", i, winName);
+              XKillClient(disp, childrenOfRoot[i]);
+            }
+          else
+            {
+              NSLog(@"hidden:  %u, %s", i, winName);
+            }
+          XFree(winName);
+        }
+      
+    }
+
+  XFree((char *)childrenOfRoot);
 }
 
 - (void)showInfo: (id)sender

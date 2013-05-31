@@ -1,3 +1,17 @@
+2013-05-31 Riccardo Mottola <rm@gnu.org>
+
+	* GNUmakefile
+	* LoginPanelController.h
+	* LoginPanelController.m
+	* loginpanel_main.m
+	Partial revert: don't start X, but try to kill all connected cliens later. Works only partially though.
+
+2013-05-23 Riccardo Mottola <rm@gnu.org>
+
+	* LoginPanelController.h
+	* LoginPanelController.m
+	Rename initialize to initializeInterface to avoid confusion.
+
 2013-05-29 Riccardo Mottola <rm@gnu.org>
 
 	* Authenticator.h
