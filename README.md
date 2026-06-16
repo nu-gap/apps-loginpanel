@@ -1,4 +1,4 @@
-NOTES:
+# loginpanel
 
 Loginpanel.app is a graphical login manager for GNUstep systems.  It is
 intended to serve the same role as xdm, gdm, or other display managers: start
@@ -9,13 +9,14 @@ The build also produces loginpaneld, a small supervisor suitable for launching
 from init or a system service.  The supervisor restarts loginpanel if the
 greeter exits unexpectedly.
 
-System Requirements:
+## System Requirements:
+
 Linux, gscrypt, GNUstep
 
 to use PAM for authentication, run make like:
 make have-pam=yes
 
-Runtime:
+## Runtime:
 
 Run loginpaneld from the system service responsible for the graphical login.
 When DISPLAY is already set and usable, loginpanel attaches to it.  When no
@@ -31,7 +32,13 @@ XServerManager.h and can be overridden at build time if a system needs a
 different server path or arguments.
 
 
-Change History
+## Change History
+06/2026
+
+Update loginpaneld so that it keeps respawning the
+loginpanel once the user logs out.  Fix how loginpanel
+interfaces with X to create a session.
+
 11/2000
 
 NSTextField commited to repository.  I need to wait
