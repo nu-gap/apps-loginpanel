@@ -43,7 +43,13 @@ include $(GNUSTEP_MAKEFILES)/common.make
 # The application to be compiled
 APP_NAME = loginpanel
 
+# The supervisor to be compiled.  It keeps the greeter available when the
+# loginpanel process exits or crashes under a system service.
+TOOL_NAME = loginpaneld
+
 loginpanel_PRINCIPAL_CLASS = LoginApplication
+
+loginpaneld_OBJC_FILES = loginpaneld.m
 
 # The Objective-C source files to be compiled
 loginpanel_OBJC_FILES = Authenticator.m \
@@ -72,4 +78,3 @@ include GNUmakefile.preamble
 include $(GNUSTEP_MAKEFILES)/tool.make
 include $(GNUSTEP_MAKEFILES)/application.make
 -include GNUmakefile.postamble
-

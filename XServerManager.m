@@ -31,6 +31,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
+#include <string.h>
 
 #if defined(_POSIX_SOURCE) || defined(SYSV) || defined(SVR4)
 # define killpg(pgrp, sig) kill(-(pgrp), sig)
@@ -58,6 +60,8 @@
   if (self)
     {
       serverPID = 0;
+      Dpy = NULL;
+      displayName = [@DEFAULT_DISPLAY copy];
     }
 
   return self;
@@ -73,9 +77,43 @@
   serverPID = pid;
 }
 
+-(NSString *) displayName
+{
+  return displayName;
+}
+
+-(void) setDisplayName:(NSString *)name
+{
+  if (name == nil || [name length] == 0)
+    return;
+
+  ASSIGN(displayName, name);
+}
+
+-(BOOL) hasUsableDisplay
+{
+  Display *display;
+
+  display = XOpenDisplay(NULL);
+  if (display == NULL)
+    display = XOpenDisplay([displayName cString]);
+
+  if (display == NULL)
+    return NO;
+
+  XCloseDisplay(display);
+  return YES;
+}
+
 -(BOOL) startXServer
 {
   char *xServer[] = DEFAULT_XSERVER;
+  xServer[1] = (char *)[displayName cString];
+
+  if ([self hasUsableDisplay])
+    return YES;
+
+  setenv("DISPLAY", [displayName cString], 1);
   serverPID = fork();
 
   if (serverPID == -1)
@@ -83,8 +121,11 @@
 
   if (serverPID == 0)
     {
+      setpgid(0, 0);
       NSLog(@"spawning X Server: %s", xServer[0]);
       execvp(xServer[0], xServer);
+      NSLog(@"failed to spawn X Server %s: %s", xServer[0], strerror(errno));
+      _exit(127);
     }
 
   NSLog(@"loginpanel waiting for X Server");
@@ -107,7 +148,14 @@
   signal(SIGKILL, SIG_DFL);
   signal(SIGALRM, SIG_DFL);
 
-  XCloseDisplay(Dpy);
+  if (serverPID <= 0)
+    return YES;
+
+  if (Dpy != NULL)
+    {
+      XCloseDisplay(Dpy);
+      Dpy = NULL;
+    }
 
   for (counter = 0;counter < 4;counter++)
     {
@@ -117,6 +165,7 @@
 	    {
 	      case ESRCH:
 	        NSLog(@"no process found in pgrp %d", serverPID);
+	        result = YES;
 	        break;
 	      case EINVAL:
 	        NSLog(@"we tried to murder with an invalid signal");
@@ -128,13 +177,18 @@
 	        NSLog(@"error while terminating child");
 	    }
 	  sig = SIGKILL;
+	  if (result)
+	    break;
 	  [self serverTimeout:3 showMessage:"waiting for server to die"];
         }
       else
 	{
-	  // jump out of the for loop, when the server got killed
-	  result = YES;
-	  break;
+	  if (![self serverTimeout:3 showMessage:"waiting for server to die"])
+	    {
+	      result = YES;
+	      break;
+	    }
+	  sig = SIGKILL;
 	}
     }
   return result;
@@ -147,7 +201,7 @@
 
   for (cycles = 0; cycles < ncycles; cycles++)
     {
-       if((Dpy = XOpenDisplay(":0.0")))
+       if((Dpy = XOpenDisplay([displayName cString])))
               return YES;
        if(![self serverTimeout:1 showMessage:"X server ready"])
               break;
@@ -168,6 +222,8 @@
          pidfound = waitpid(serverPID, NULL, WNOHANG);
          if (pidfound == serverPID)
               break;
+         if (pidfound == -1 && errno == ECHILD)
+              break;
          if (timeout)
            {
              if (i == 0 && text != lasttext)
@@ -184,7 +240,7 @@
       NSLog(@"\n");
 
     lasttext = text;
-    return (serverPID != pidfound);
+    return !(pidfound == serverPID || (pidfound == -1 && errno == ECHILD));
 }
 
 @end

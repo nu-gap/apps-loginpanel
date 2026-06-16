@@ -49,6 +49,7 @@
     NSUserDefaults *defaults;
 }
 - (void)applicationDidFinishLaunching: (NSNotification *)notification;
+- (void)applicationWillTerminate: (NSNotification *)notification;
 - (void)initializeInterface;
 - (void)passwordEntered:(id)sender;
 - (void)powerButton:(id)sender;

@@ -56,8 +56,8 @@
 void catchQuittingSignal(int sig)
 {
   NSLog(@"catchQuittingSignal: %d", sig);
-  //  [self handleQuittingSignal: sig];
-  exit(0);
+  [[XServerManager sharedXServerManager] stopXServer];
+  exit(sig);
 }
 
 @implementation LoginPanelController
@@ -98,6 +98,11 @@ void catchQuittingSignal(int sig)
   signal(SIGTERM, catchQuittingSignal);
 }
 
+- (void)applicationWillTerminate: (NSNotification *)notification
+{
+  [[XServerManager sharedXServerManager] stopXServer];
+}
+
 - (void)initializeInterface
 {
   [window restore]; 
@@ -106,12 +111,10 @@ void catchQuittingSignal(int sig)
 
 - (void)passwordEntered:(id)sender
 {
-  char *pwstring = 0;
 #ifdef HAVE_PAM
   BOOL verified = NO;
 #endif
-  
-  pwstring = (char *)[[passwordField stringValue] cString];
+
 #ifdef DEBUG 
   printf("Verifying login...\n");
 #endif
@@ -243,7 +246,9 @@ void catchQuittingSignal(int sig)
         {
 	  perror("Error in setsid: ");
 	}
+#ifndef __linux__
       setlogin(pw->pw_name);
+#endif
 
       setpgid(clientPid, clientPid);
       NSLog(@"group process id: %d", getpgid(clientPid));
@@ -463,5 +468,3 @@ void catchQuittingSignal(int sig)
 }
 
 @end
-
-

@@ -31,12 +31,45 @@
 */
 
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
 #import <AppKit/AppKit.h>
 #import <XServerManager.h>
 
-
 int main(int argc, const char *argv[])
 {
-   return NSApplicationMain(argc, argv);
+  NSAutoreleasePool *pool;
+  XServerManager *manager;
+  char *display;
+
+  pool = [NSAutoreleasePool new];
+  manager = [XServerManager sharedXServerManager];
+  display = getenv("DISPLAY");
+
+  if (display != NULL && strlen(display) > 0)
+    [manager setDisplayName: [NSString stringWithCString: display]];
+
+  if (![manager hasUsableDisplay])
+    {
+      NSString *loginPanelDisplay;
+
+      loginPanelDisplay = [[[NSProcessInfo processInfo] environment]
+        objectForKey: @"LOGINPANEL_DISPLAY"];
+      if (loginPanelDisplay != nil)
+        [manager setDisplayName: loginPanelDisplay];
+
+      if (![manager startXServer])
+        {
+          NSLog(@"loginpanel could not start or connect to display %@",
+            [manager displayName]);
+          [pool release];
+          return 1;
+        }
+    }
+
+  setenv("DISPLAY", [[manager displayName] cString], 1);
+  [pool release];
+
+  return NSApplicationMain(argc, argv);
 }

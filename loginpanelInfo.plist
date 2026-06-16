@@ -6,6 +6,6 @@
     CopyrightDescription = "Released under ...";
     FullVersionID = 0.1;
     NSExecutable = loginpanel;
-    NSPrincipalClass = NSApplication;
+    NSPrincipalClass = LoginApplication;
     NSRole = Application;
 }

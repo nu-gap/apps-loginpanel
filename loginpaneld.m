@@ -29,11 +29,23 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <stdlib.h>
 #import <Foundation/Foundation.h>
 
 int main(int argc, const char *argv[]) {
-  char *loginpanel[] = {"loginpanel", "-GSX11HandlesWindowDecorations", "NO", NULL};
+  char **loginpanel;
+  int arg;
   pid_t panelPID;
+
+  loginpanel = calloc(argc + 4, sizeof(char *));
+  if (loginpanel == NULL)
+    return 1;
+
+  loginpanel[0] = "loginpanel";
+  loginpanel[1] = "-GSX11HandlesWindowDecorations";
+  loginpanel[2] = "NO";
+  for (arg = 1; arg < argc; arg++)
+    loginpanel[arg + 2] = (char *)argv[arg];
 
   while (1)
     {
@@ -41,11 +53,13 @@ int main(int argc, const char *argv[]) {
         {
 	  case 0:
             execvp(loginpanel[0], loginpanel);
-	    break;
+	    _exit(127);
 	  case -1:
+	    sleep(1);
 	    break;
 	  default:
 	    waitpid(panelPID, NULL, 0);
+	    sleep(1);
 	}
     }
 

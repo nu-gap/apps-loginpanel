@@ -30,13 +30,18 @@
 #include <X11/Xlib.h>
 
 #ifndef DEFAULT_XSERVER
-#define DEFAULT_XSERVER {"/usr/X11R6/bin/X", NULL}
+#define DEFAULT_XSERVER {"X", ":0", "-nolisten", "tcp", NULL}
+#endif
+
+#ifndef DEFAULT_DISPLAY
+#define DEFAULT_DISPLAY ":0"
 #endif
 
 @interface XServerManager : NSObject
 {
   pid_t serverPID;
   Display *Dpy;
+  NSString *displayName;
 }
 
 // Initialization Methods
@@ -45,8 +50,11 @@
 // Accessors
 -(pid_t) serverPID;
 -(void) setServerPID:(pid_t)pid;
+-(NSString *) displayName;
+-(void) setDisplayName:(NSString *)name;
 
 // start and stop the server
+-(BOOL) hasUsableDisplay;
 -(BOOL) startXServer;
 -(BOOL) stopXServer;
 -(BOOL) waitForServer;
