@@ -18,7 +18,8 @@ ADDITIONAL_LDFLAGS +=
 ADDITIONAL_INCLUDE_DIRS += -I/usr/X11R6/include
 
 # Additional library directories the linker should search
-ADDITIONAL_LIB_DIRS += -L/usr/X11R6/lib -lX11
+ADDITIONAL_LIB_DIRS += -L/usr/X11R6/lib
+ADDITIONAL_GUI_LIBS += -lX11 -lXau
 
 # Additional GUI libraries to link
 ifneq ($(findstring openbsd, $(GNUSTEP_TARGET_OS)), openbsd)
@@ -27,6 +28,7 @@ endif
 
 ifeq ($(have-pam), yes)
 ADDITIONAL_CPPFLAGS += -DHAVE_PAM=1
+ADDITIONAL_GUI_LIBS += -lpam
 endif
 
 ifeq ($(have-openbsd-auth), yes)

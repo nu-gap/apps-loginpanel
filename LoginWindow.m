@@ -43,6 +43,7 @@
 #define SHRINKFACTOR 70
 
 @implementation LoginWindow
+
 - (id)initWithContentRect:(NSRect)contentRect
 		styleMask:(NSUInteger)styleMask
 		  backing:(NSBackingStoreType)bufferingType
@@ -99,22 +100,8 @@
 
 - (void)shrink
 {
-  NSPoint origin, savedOrigin;
-  NSRect windowRect;
-  int i = 0, w = 0;
-
-  windowRect = [self frame];
-  savedWindowRect = windowRect;
-  savedOrigin = windowRect.origin;
-  origin = savedOrigin;
-  w = windowRect.size.width;
-  for( i = 0; i < (w - SHRINKFACTOR); i+=SHRINKFACTOR )
-    {
-      windowRect.size.width-=SHRINKFACTOR;
-      windowRect.origin.x+=SHRINKFACTOR/2;
-      [self setFrame: windowRect display: YES];
-    }
-  [self close];
+  savedWindowRect = [self frame];
+  [self orderOut: self];
 }
 
 - (void)restore
@@ -150,6 +137,7 @@
   savedWindowRect = windowRect;
   [self setFrame: windowRect display: NO];
   [loginImageView setImage: image];
+  RELEASE(image);
   [loginImageView setNeedsDisplay: YES];
   [loginImageView setEditable: NO];
 }
@@ -172,6 +160,8 @@
   altImage = [[NSImage alloc] initWithData: altImageData];
   [powerButton setImage: image];
   [powerButton setAlternateImage: altImage];
+  RELEASE(image);
+  RELEASE(altImage);
   [powerButton setNeedsDisplay: YES];
 }
 
@@ -193,24 +183,25 @@
   altImage = [[NSImage alloc] initWithData: altImageData];
   [restartButton setImage: image];
   [restartButton setAlternateImage: altImage];
+  RELEASE(image);
+  RELEASE(altImage);
   [restartButton setNeedsDisplay: YES];
 }
 
 - (void)displayHostname
 {
-  char hostname[256], displayname[256];
-  int  namelen = 256, index = 0;
-  NSString *host_name = nil;
+  char hostname[256];
+  char *dot;
 
-  // Initialize hostname
-  gethostname( hostname, namelen );
-  for(index = 0; index < 256 && hostname[index] != '.'; index++)
-    {
-      displayname[index] = hostname[index];
-    }
-  displayname[index] = 0;
-  host_name = [NSString stringWithCString: displayname];
-  [hostnameText setStringValue: host_name];
+  if (gethostname(hostname, sizeof(hostname)) != 0)
+    strcpy(hostname, "localhost");
+  hostname[sizeof(hostname) - 1] = '\0';
+  dot = strchr(hostname, '.');
+  if (dot != NULL)
+    *dot = '\0';
+  [hostnameText setBordered: NO];
+  [hostnameText setBezeled: NO];
+  [hostnameText setStringValue: [NSString stringWithUTF8String: hostname]];
 }
 
 - (void)initializeInterface
@@ -224,7 +215,9 @@
   [self displayRestartButton];
   [self displayHostname];
   [self center];
+  savedWindowRect = [self frame];
 }
+
 @end
 
 

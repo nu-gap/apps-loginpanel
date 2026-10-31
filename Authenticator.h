@@ -30,29 +30,31 @@
 
 #import <AppKit/AppKit.h>
 
+#include <pwd.h>
 #ifdef HAVE_PAM
 #include <security/pam_appl.h>
-#else
-#include <pwd.h>
 #endif
 
 @interface Authenticator : NSObject
 {
-    NSString *username;
-    NSString *password;
+  NSString *username;
+  NSString *password;
+  struct passwd *pw;
 #ifdef HAVE_PAM
-    pam_handle_t *handle;
+  pam_handle_t *handle;
+  BOOL sessionOpen;
+  BOOL credentialsEstablished;
 #endif
-    struct passwd *pw;
-    NSString *passwordFilePath;
 }
-- initWithUsername: (NSString *)user
-          password: (NSString *)pass;
+
+- (id)initWithUsername: (NSString *)user password: (NSString *)pass;
 - (void)setUsername: (NSString *)user;
 - (void)setPassword: (NSString *)pass;
 - (NSString *)username;
 - (NSString *)password;
 - (BOOL)isPasswordCorrect;
+- (BOOL)openSession;
+- (void)closeSession;
 - (void)setEnvironment;
 - (struct passwd *)getPasswordEntity;
 

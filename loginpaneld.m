@@ -32,35 +32,72 @@
 #include <stdlib.h>
 #import <Foundation/Foundation.h>
 
-int main(int argc, const char *argv[]) {
-  char **loginpanel;
-  int arg;
-  pid_t panelPID;
+#include <signal.h>
+#include <errno.h>
 
-  loginpanel = calloc(argc + 4, sizeof(char *));
-  if (loginpanel == NULL)
-    return 1;
+static volatile sig_atomic_t stopping = 0;
+static volatile sig_atomic_t childPID = 0;
 
-  loginpanel[0] = "loginpanel";
-  loginpanel[1] = "-GSX11HandlesWindowDecorations";
-  loginpanel[2] = "NO";
-  for (arg = 1; arg < argc; arg++)
-    loginpanel[arg + 2] = (char *)argv[arg];
-
-  while (1)
-    {
-      switch ((panelPID = fork()))
-        {
-	  case 0:
-            execvp(loginpanel[0], loginpanel);
-	    _exit(127);
-	  case -1:
-	    sleep(1);
-	    break;
-	  default:
-	    waitpid(panelPID, NULL, 0);
-	    sleep(1);
-	}
-    }
-
+static void
+stopSupervisor(int signalNumber)
+{
+  stopping = 1;
+  if (childPID > 0)
+    kill(childPID, signalNumber);
 }
+
+int
+main(int argc, const char *argv[])
+{
+  char **arguments;
+  int arg;
+  pid_t result;
+  sigset_t signals, previous;
+  struct sigaction action;
+
+  arguments = calloc(argc + 4, sizeof(char *));
+  if (arguments == NULL)
+    return 1;
+  arguments[0] = "loginpanel";
+  arguments[1] = "-GSX11HandlesWindowDecorations";
+  arguments[2] = "NO";
+  for (arg = 1; arg < argc; arg++)
+    arguments[arg + 2] = (char *)argv[arg];
+  sigemptyset(&signals);
+  sigaddset(&signals, SIGTERM);
+  sigaddset(&signals, SIGINT);
+  sigaddset(&signals, SIGHUP);
+  memset(&action, 0, sizeof(action));
+  action.sa_handler = stopSupervisor;
+  sigemptyset(&action.sa_mask);
+  sigaction(SIGTERM, &action, NULL);
+  sigaction(SIGINT, &action, NULL);
+  sigaction(SIGHUP, &action, NULL);
+  while (!stopping)
+    {
+      sigprocmask(SIG_BLOCK, &signals, &previous);
+      childPID = fork();
+      if (childPID == 0)
+        {
+          signal(SIGTERM, SIG_DFL);
+          signal(SIGINT, SIG_DFL);
+          signal(SIGHUP, SIG_DFL);
+          sigprocmask(SIG_SETMASK, &previous, NULL);
+          execvp(arguments[0], arguments);
+          _exit(127);
+        }
+      sigprocmask(SIG_SETMASK, &previous, NULL);
+      if (childPID > 0)
+        {
+          do
+            result = waitpid(childPID, NULL, 0);
+          while (result < 0 && errno == EINTR);
+        }
+      childPID = 0;
+      if (!stopping)
+        sleep(1);
+    }
+  free(arguments);
+  return 0;
+}
+

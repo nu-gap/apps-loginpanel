@@ -1,0 +1,6 @@
+# Debian/Ubuntu example: install as /etc/pam.d/loginpanel.
+# Other systems must use their distribution's graphical-login PAM stack.
+auth required pam_nologin.so
+@include common-auth
+@include common-account
+@include common-session

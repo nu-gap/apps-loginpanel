@@ -32,439 +32,382 @@
 */
 
 #import "LoginPanelController.h"
-#import "LoginImageView.h"
 #import "Authenticator.h"
 #import "XServerManager.h"
-
-#ifdef HAVE_PAM
-#include <gscrypt/GSPam.h>
-#endif
-
-/* for stat() */
 #include <sys/stat.h>
-#include <fcntl.h>
-
 #include <sys/wait.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <grp.h> /* initgroups () */
-
+#include <grp.h>
+#include <errno.h>
+#include <signal.h>
+#include <string.h>
+#include <stdlib.h>
 #include <X11/Xlib.h>
-#include <X11/Xatom.h>
 
-/* Signal Handlers */
-void catchQuittingSignal(int sig)
+static volatile sig_atomic_t quittingSignal = 0;
+
+static void
+catchQuittingSignal(int sig)
 {
-  NSLog(@"catchQuittingSignal: %d", sig);
-  [[XServerManager sharedXServerManager] stopXServer];
-  exit(sig);
+  quittingSignal = sig;
 }
 
+@interface LoginPanelController (SessionManagement)
+
+- (void)pollSession: (NSTimer *)timer;
+- (void)setUserDisplayAccess: (BOOL)allowed;
+- (void)sessionFailed;
+
+@end
+
 @implementation LoginPanelController
+
 - (id)init
 {
-  // Initialize the superclass.
-  [super init];
-
-  // Laziness is a terrible thing.... I am making the loginpanel
-  // application pretend as though it is xdm so that I don't
-  // have to write my own .conf file for PAM.   I will get around
-  // to writing it once I get this working.
-#ifdef HAVE_PAM
-  authenticator = [[GSPam alloc] initWithServiceName: @"xdm"];
-#else
-  authenticator = [[Authenticator alloc] init];
-#endif
-  defaults = [NSUserDefaults standardUserDefaults];
-
+  self = [super init];
+  if (self != nil)
+    {
+      authenticator = [[Authenticator alloc] init];
+      defaults = [NSUserDefaults standardUserDefaults];
+    }
   return self;
+}
+
+- (void)dealloc
+{
+  [sessionTimer invalidate];
+  DESTROY(sessionTimer);
+  DESTROY(authenticator);
+  DESTROY(nextAttempt);
+  DESTROY(statusField);
+  DEALLOC;
 }
 
 - (void)applicationDidFinishLaunching: (NSNotification *)notification
 {
-  NSPoint origin;
-
-  NSLog(@"LoginPanelController: applicationDidFinishLaunching");
   [self initializeInterface];
-
-  // Eliminate the application icon!!
-  origin.x = -1000;
-  origin.y = -1000;
-  [[NSApp iconWindow] setFrameOrigin: origin];
-
   signal(SIGQUIT, catchQuittingSignal);
-  signal(SIGKILL, catchQuittingSignal);
+  signal(SIGINT, catchQuittingSignal);
   signal(SIGHUP, catchQuittingSignal);
   signal(SIGTERM, catchQuittingSignal);
+  sessionTimer = RETAIN([NSTimer scheduledTimerWithTimeInterval: 0.25
+    target: self selector: @selector(pollSession:) userInfo: nil repeats: YES]);
+  [[NSRunLoop currentRunLoop] addTimer: sessionTimer forMode: NSModalPanelRunLoopMode];
+  [[NSRunLoop currentRunLoop] addTimer: sessionTimer forMode: NSEventTrackingRunLoopMode];
 }
 
 - (void)applicationWillTerminate: (NSNotification *)notification
 {
+  if (sessionPID > 0)
+    {
+      [self killProcessGroup: sessionPID];
+      while (waitpid(sessionPID, NULL, 0) < 0 && errno == EINTR)
+        ;
+      sessionPID = 0;
+    }
+  [self setUserDisplayAccess: NO];
+  [authenticator closeSession];
   [[XServerManager sharedXServerManager] stopXServer];
 }
 
 - (void)initializeInterface
 {
-  [window restore]; 
+  [statusField setStringValue: @"Enter your name and password."];
+  [window restore];
   [window makeKeyAndOrderFront: self];
+  [window makeFirstResponder: usernameField];
 }
 
-- (void)passwordEntered:(id)sender
+- (void)passwordEntered: (id)sender
 {
-#ifdef HAVE_PAM
-  BOOL verified = NO;
-#endif
-
-#ifdef DEBUG 
-  printf("Verifying login...\n");
-#endif
-
-#if 0 /* no pam working yet */
-  if(![authenticator start]) 
-    {
-      NSLog(@"Failed to start PAM");
-    }
-#endif
-
+  if (sessionPID > 0 || (nextAttempt != nil && [nextAttempt timeIntervalSinceNow] > 0))
+    return;
+  [statusField setStringValue: @"Checking login…"];
+  [statusField display];
   [authenticator setUsername: [usernameField stringValue]];
   [authenticator setPassword: [passwordField stringValue]];
-
-#ifdef HAVE_PAM
-//  verified = [authenticator authenticateWithFlag: PAM_DISALLOW_NULL_AUTHTOK
-			    silent: NO];
-#endif
-
-  
-  if( [authenticator isPasswordCorrect] == YES )
+  if ([authenticator isPasswordCorrect])
     {
       [self logUserIn];
     }
   else
     {
+      ASSIGN(nextAttempt, [NSDate dateWithTimeIntervalSinceNow: 2]);
       [self rejectEntries];
     }
+  [authenticator setPassword: nil];
+  [passwordField setStringValue: @""];
+}
 
-#ifdef HAVE_PAM
-  if(![authenticator end]) 
+- (void)powerButton: (id)sender
+{
+  if (sessionPID > 0 || geteuid() != 0)
+    return;
+  if (NSRunAlertPanel(@"Shut Down", @"Shut down this computer?",
+                      @"Cancel", @"Shut Down", nil) == NSAlertAlternateReturn)
     {
-      NSLog(@"Failed to end PAM");
+      if (system("/sbin/shutdown -h now") != 0)
+        NSRunAlertPanel(@"Shut Down", @"The computer could not shut down.", @"OK", nil, nil);
     }
-#endif
 }
 
-- (void)powerButton:(id)sender
+- (void)restartButton: (id)sender
 {
-#ifdef DEBUG
-  puts("Powering down...");
-#endif
-#ifdef __linux__
-  if(system("/sbin/shutdown -g0")) NSLog(@"Problem shutting down");
-#else
-  if(system("/sbin/halt -p")) NSLog(@"Problem shutting down");
-#endif
-}
-
-- (void)restartButton:(id)sender
-{
-#ifdef DEBUG
-  puts("Restarting computer...");
-#endif
-  if(system("/sbin/reboot")) NSLog(@"Problem rebooting system");
-}
-
-- (void)usernameEntered:(id)sender
-{
-#ifdef DEBUG
-  printf("Username: %s\n", [[usernameField stringValue] cString]);
-#endif
-  if( ![[usernameField stringValue] isEqualToString: [NSString string]] )
+  if (sessionPID > 0 || geteuid() != 0)
+    return;
+  if (NSRunAlertPanel(@"Restart", @"Restart this computer?",
+                      @"Cancel", @"Restart", nil) == NSAlertAlternateReturn)
     {
-      [passwordField becomeFirstResponder];
+      if (system("/sbin/reboot") != 0)
+        NSRunAlertPanel(@"Restart", @"The computer could not restart.", @"OK", nil, nil);
     }
+}
+
+- (void)usernameEntered: (id)sender
+{
+  if ([[usernameField stringValue] length] > 0)
+    [window makeFirstResponder: passwordField];
   else
-    {
-#ifdef DEBUG
-      puts("Null usernames are illegal...");
-#endif
-      [self rejectEntries];
-    }
+    [self rejectEntries];
 }
 
 - (void)awakeFromNib
 {
-  puts("The sleeper has awakened -- awakeFromNib");
-  if(window == nil) NSLog(@"Window is nil!");
-  else NSLog(@"The window = %@",window);
+  NSButton *loginButton;
+  [NSApp setDelegate: self];
+  [passwordField setBackgroundColor: [NSColor textBackgroundColor]];
+  [passwordField setTextColor: [NSColor textColor]];
+  [passwordField setDrawsBackground: YES];
+  [usernameField setTarget: self];
+  [usernameField setAction: @selector(usernameEntered:)];
+  [passwordField setTarget: self];
+  [passwordField setAction: @selector(passwordEntered:)];
+  loginButton = [[NSButton alloc] initWithFrame: NSMakeRect(20, 16, 100, 30)];
+  [loginButton setTitle: @"Log In"];
+  [loginButton setTarget: self];
+  [loginButton setAction: @selector(passwordEntered:)];
+  [[window contentView] addSubview: loginButton];
+  RELEASE(loginButton);
+  statusField = [[NSTextField alloc] initWithFrame: NSMakeRect(20, 63, 420, 18)];
+  [statusField setEditable: NO];
+  [statusField setSelectable: NO];
+  [statusField setBordered: NO];
+  [statusField setBezeled: NO];
+  [statusField setTextColor: [NSColor blackColor]];
+  [statusField setDrawsBackground: NO];
+  [statusField setFont: [NSFont systemFontOfSize: 11]];
+  [[window contentView] addSubview: statusField];
+  [window setReleasedWhenClosed: NO];
   [window initializeInterface];
-  [window waggle];
+  [usernameField setNextKeyView: passwordField];
+  [passwordField setNextKeyView: usernameField];
 }
 
 - (void)rejectEntries
 {
-  [usernameField setStringValue: @""];
   [passwordField setStringValue: @""];
+  [statusField setStringValue: @"Incorrect username or password. Please try again."];
+  NSBeep();
   [window waggle];
-  [usernameField becomeFirstResponder];
+  [window makeFirstResponder: passwordField];
+}
+
+- (void)sessionFailed
+{
+  [self initializeInterface];
+  NSRunAlertPanel(@"Login Failed",
+    @"The desktop session could not start. Check the session script and system login configuration.",
+    @"OK", nil, nil);
 }
 
 - (void)logUserIn
 {
-  [window shrink];
-  [usernameField setStringValue: @""];
-  [passwordField setStringValue: @""];
-
-
-#ifdef HAVE_PAM
-  [authenticator openSessionSilently: NO];  // We will spend a great deal of time here!!
-#endif
-
-#ifndef HAVE_PAM
+  if (![authenticator openSession])
+    {
+      [authenticator closeSession];
+      [self sessionFailed];
+      return;
+    }
+  [self setUserDisplayAccess: YES];
   [self startSession];
-#endif
-  NSLog(@"resetting itself");
-  [self initializeInterface];
+  if (sessionPID > 0)
+    {
+      [window orderOut: self];
+      [usernameField setStringValue: @""];
+      [passwordField setStringValue: @""];
+    }
+  else
+    {
+      [self setUserDisplayAccess: NO];
+      [authenticator closeSession];
+      [self sessionFailed];
+    }
 }
 
 - (void)startSession
 {
-  int clientPid;
-  pid_t pid;
-  struct passwd *pw;
-  
-  pw = [authenticator getPasswordEntity];
-
-  /* fork ourselves before downgrade... */
-  clientPid = 0;
-  clientPid = fork();
-  if(clientPid == 0)
+  struct passwd *pw = [authenticator getPasswordEntity];
+  if (pw == NULL)
+    return;
+  sessionPID = fork();
+  if (sessionPID == 0)
     {
-      int retValue;
-      char sessioncmd[MAXPATHLEN];
-      struct stat stBuff;
+      extern char **environ;
+      char *display = strdup(getenv("DISPLAY") != NULL ? getenv("DISPLAY") : "");
+      char script[4096];
+      const char *systemScripts[] = { "/etc/X11/Xsession", "/etc/X11/xinit/xinitrc",
+                                     "/etc/X11/xdm/Xsession", NULL };
+      int i;
+      struct stat info;
 
-      if (setsid() == -1)
+      if (display == NULL || setsid() < 0)
+        _exit(125);
+      signal(SIGQUIT, SIG_DFL);
+      signal(SIGINT, SIG_DFL);
+      signal(SIGHUP, SIG_DFL);
+      signal(SIGTERM, SIG_DFL);
+      umask(022);
+      /* Never pass the privileged greeter's environment to a desktop. */
+      environ = NULL;
+      [authenticator setEnvironment];
+      if (setenv("DISPLAY", display, 1) != 0
+          || setenv("HOME", pw->pw_dir, 1) != 0
+          || setenv("USER", pw->pw_name, 1) != 0
+          || setenv("LOGNAME", pw->pw_name, 1) != 0
+          || setenv("SHELL", pw->pw_shell[0] ? pw->pw_shell : "/bin/sh", 1) != 0
+          || setenv("PATH", "/usr/GNUstep/System/Tools:/usr/GNUstep/Local/Tools:/usr/local/bin:/usr/bin:/bin", 1) != 0)
+        _exit(125);
+      free(display);
+      if (geteuid() == 0)
         {
-	  perror("Error in setsid: ");
-	}
-#ifndef __linux__
-      setlogin(pw->pw_name);
-#endif
-
-      setpgid(clientPid, clientPid);
-      NSLog(@"group process id: %d", getpgid(clientPid));
-
-      unsetenv("GNUSTEP_USER_ROOT");
-      unsetenv("MAIL");
-      if(setenv("USER", pw->pw_name, YES) < 0)
-	NSLog(@"error setting USER %s", pw->pw_name);
-      if(setenv("LOGNAME", pw->pw_name, YES) < 0)
-	NSLog(@"error setting LOGNAME %s", pw->pw_name);
-      NSLog(@"user dir: %s", pw->pw_dir);
-      /* change home directory */
-      if(setenv("HOME", pw->pw_dir, YES) < 0)
+          if (initgroups(pw->pw_name, pw->pw_gid) != 0
+              || setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0)
+            _exit(125);
+        }
+      if (getuid() != pw->pw_uid || geteuid() != pw->pw_uid
+          || getgid() != pw->pw_gid || chdir(pw->pw_dir) != 0)
+        _exit(125);
+      /* Access user-owned scripts only after dropping privileges. */
+      snprintf(script, sizeof(script), "%s/.xsession", pw->pw_dir);
+      if (stat(script, &info) != 0 || !S_ISREG(info.st_mode) || access(script, R_OK) != 0)
+        snprintf(script, sizeof(script), "%s/.xinitrc", pw->pw_dir);
+      for (i = 0; stat(script, &info) != 0 || !S_ISREG(info.st_mode)
+           || access(script, R_OK) != 0; i++)
+        {
+          if (systemScripts[i] == NULL)
+            _exit(125);
+          snprintf(script, sizeof(script), "%s", systemScripts[i]);
+        }
+      /* Do not leak the greeter's X or other privileged connections. */
       {
-        NSLog(@"%d could not switch HOME to %s", errno, pw->pw_dir);
+        long limit = sysconf(_SC_OPEN_MAX);
+        int descriptor;
+        if (limit < 0)
+          limit = 1024;
+        for (descriptor = 3; descriptor < limit; descriptor++)
+          close(descriptor);
       }
-      /* change current directory */
-      chdir(pw->pw_dir);
-      // Set user and group ids
-      if ((initgroups(pw->pw_name, pw->pw_gid) != 0) 
-	  || (setgid(pw->pw_gid) != 0) 
-	  || (setuid(pw->pw_uid) != 0)) 
-	{
-	  NSLog(@"Could not switch to user id %@.", [authenticator username]);
-	  exit(0);
-	}
-      // try to find an appropriate script to be run after login
-      // FIXME - RM : this code should all be rewriten using NS* classes !!!
-      snprintf(sessioncmd, sizeof(sessioncmd), "%s/.xsession", pw->pw_dir);
-      printf("trying: %s\n", sessioncmd);
-      if (stat(sessioncmd, &stBuff) != 0)
-        snprintf(sessioncmd, sizeof(sessioncmd), "%s/.xinitrc", pw->pw_dir);
-      printf("trying: %s\n", sessioncmd);
-      if (stat(sessioncmd, &stBuff) != 0)
-        snprintf(sessioncmd, sizeof(sessioncmd), "/etc/X11/xinit/xinitrc");
-      printf("trying: %s\n", sessioncmd);
-      if (stat(sessioncmd, &stBuff) != 0)
-        snprintf(sessioncmd, sizeof(sessioncmd), "/etc/X11/xdm/Xsession");
-      printf("trying: %s\n", sessioncmd);
-      if (stat(sessioncmd, &stBuff) == 0)
-	{
-	  printf("Using session: %s", sessioncmd);
-	  retValue = execl("/bin/sh", "sh", sessioncmd, (char *)NULL);
-	}
-      else
-	{
-	  printf ("Lost all hope, no session script found.\n");
-	  exit(-1);
-	}
-
-      if (retValue < 0)
-      {
-        NSLog(@"an error in the child occoured : %d", errno);
-        perror("exec");
-        exit(-1);
-      }
+      execl("/bin/sh", "sh", script, (char *)NULL);
+      _exit(125);
     }
-  NSLog(@"client PID: %d", clientPid);
-  pid = wait(0);
-  while (pid != clientPid)
-    {
-       NSLog(@"group PID: %d", pid);
-       pid = wait(0);
-    }
-  NSLog(@"finally %d = %d", clientPid, pid);
-
-  [self killXClients];
-  [self killProcessGroup:pid];
 }
 
-- (void)killProcessGroup:(pid_t)pid
+- (void)pollSession: (NSTimer *)timer
 {
-  NSLog(@"sending term to %i", pid);
-  if (killpg (pid, SIGTERM) == -1)
-    { 	 
-      switch (errno) 	 
-        { 	 
-        case ESRCH: 	 
-          NSLog(@"no process found in pgrp %d", pid); 	 
-          break; 	 
-        case EINVAL: 	 
-          NSLog(@"we tried to murder with an invalid signal"); 	 
-          break; 	 
-        case EPERM: 	 
-          NSLog(@"we did not murder our children strong enough"); 	 
-          break; 	 
-        default: 	 
-          NSLog(@"error while sig-terming child"); 	 
-	  	 
-        } 	 
-    } 	 
-  NSLog(@" client did not term..., sending kill"); 	 
-  if (killpg (pid, SIGKILL) == -1) 	 
-    { 	 
-      switch (errno) 	 
-        { 	 
-        case ESRCH: 	 
-          break; 	 
-        case EINVAL: 	 
-          NSLog(@"we tried to murder with an invalid signal"); 	 
-          break; 	 
-        case EPERM: 	 
-          NSLog(@"we did not murder our children strong enough"); 	 
-          break; 	 
-        default: 	 
-          NSLog(@"Unknown error: %d", errno); 	 
-        } 	 
+  int status;
+  pid_t result;
+  if (quittingSignal != 0)
+    {
+      [NSApp terminate: self];
+      return;
     }
+  if (sessionPID <= 0)
+    return;
+  result = waitpid(sessionPID, &status, WNOHANG);
+  if (result == 0 || (result < 0 && errno == EINTR))
+    return;
+  [self killProcessGroup: sessionPID];
+  sessionPID = 0;
+  [self setUserDisplayAccess: NO];
+  [authenticator closeSession];
+  [self initializeInterface];
+  if (result < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0)
+    [self sessionFailed];
+}
+
+- (void)killProcessGroup: (pid_t)pid
+{
+  if (pid <= 1 || pid == getpgrp())
+    return;
+  kill(-pid, SIGTERM);
+  kill(-pid, SIGKILL);
 }
 
 - (void)killXClients
 {
-  Display *disp;
-  Window rootWin;
-  Window parentWin;
-  Window *childrenOfRoot;
-  unsigned int numOfChildren;
-  unsigned int i;
-  Atom atom_NET_WM_PID;
+  /* Cleanup is restricted to the session process group.  A display may
+     contain other users' clients, including the greeter itself. */
+  if (sessionPID > 0)
+    [self killProcessGroup: sessionPID];
+}
 
-  /* Can we cant it from GNUstep ? */
-  disp = XOpenDisplay(NULL);
-  if (disp)
-    NSLog(@"Got display");
-
-  rootWin = XDefaultRootWindow(disp);
-
-  XQueryTree(disp, rootWin, &rootWin, &parentWin, &childrenOfRoot, &numOfChildren);
-  /*
-  if(1)
+- (void)setUserDisplayAccess: (BOOL)allowed
+{
+  Display *display;
+  XServerInterpretedAddress address;
+  XHostAddress host;
+  if (!allowed && !xAccessGranted)
+    return;
+  display = XOpenDisplay(NULL);
+  if (display == NULL)
+    return;
+  address.type = "localuser";
+  address.typelength = strlen(address.type);
+  address.value = (char *)[[authenticator username] UTF8String];
+  address.valuelength = strlen(address.value);
+  host.family = FamilyServerInterpreted;
+  host.address = (char *)&address;
+  host.length = sizeof(address);
+  if (allowed)
     {
-      for(i = 0; i < numOfChildren; i++)
+      XHostAddress *hosts;
+      int count, i;
+      Bool enabled;
+      hosts = XListHosts(display, &count, &enabled);
+      for (i = 0; i < count; i++)
         {
-          if(XGetWindowAttributes(disp, childrenOfWin[i], &attr) 
-             && (attr.map_state == IsViewable))
-            childrenOfWin[i] = XmuClientWindow(disp, childrenOfWin[i]);
-          else
-            childrenOfWin[i] = 0;
-        }
-    }
-  */
-  
-  atom_NET_WM_PID = XInternAtom(disp, "_NET_WM_PID", true);
-  if (atom_NET_WM_PID == None)
-    {
-      NSLog(@"XInternAtom failure for _NET_WM_PID");
-      return;
-    }
-
-  for(i = 0; i < numOfChildren; i++)
-    {
-      Window wind;
-      XWindowAttributes attr;
-      int format;
-      unsigned long nItems;
-      unsigned long bytesAfter;
-      unsigned char *props;
-      pid_t clientPID;
-      Atom atomType;
-
-      wind = childrenOfRoot[i];
-
-      XGetWindowProperty(disp, wind, atom_NET_WM_PID, 0, 1, False, AnyPropertyType, &atomType, &format, &nItems, &bytesAfter, &props);
-
-      clientPID = 0;
-      if (props)
-        {
-          NSLog(@"We got some PID");
-          clientPID = (pid_t)*((unsigned long *)props);
-          XFree(props);
-        }
-
-      NSLog(@"Process ID: %ld", (long int)clientPID);
-      if(XGetWindowAttributes(disp, wind, &attr))
-        {
-          char *winName;
-
-          XFetchName(disp, wind, &winName);
-          
-          
-          if (attr.map_state == IsViewable)
+          if (hosts[i].family == FamilyServerInterpreted)
             {
-              NSLog(@"killing %u, %s", i, winName);
-              XKillClient(disp, childrenOfRoot[i]);
+              XServerInterpretedAddress *existing = (void *)hosts[i].address;
+              if (existing->typelength == address.typelength
+                  && existing->valuelength == address.valuelength
+                  && memcmp(existing->type, address.type, address.typelength) == 0
+                  && memcmp(existing->value, address.value, address.valuelength) == 0)
+                break;
             }
-          else
-            {
-              NSLog(@"hidden:  %u, %s", i, winName);
-            }
-          XFree(winName);
         }
-      
+      if (i == count)
+        {
+          XAddHost(display, &host);
+          xAccessGranted = YES;
+        }
+      if (hosts != NULL)
+        XFree(hosts);
     }
-
-  XFree((char *)childrenOfRoot);
+  else
+    {
+      XRemoveHost(display, &host);
+      xAccessGranted = NO;
+    }
+  XSync(display, False);
+  XCloseDisplay(display);
 }
 
 - (void)showInfo: (id)sender
 {
-  // load info panel
-  if( infoPanel == nil )
-    {
-      if( ![NSBundle loadNibNamed: @"InfoPanel"
-		     owner: self])
-	{
-	  NSLog(@"Problem loading info panel...");
-	}
-
-    }
+  if (infoPanel == nil)
+    [NSBundle loadNibNamed: @"InfoPanel" owner: self];
   [infoPanel makeKeyAndOrderFront: self];
-}
-
-
-- (void) handleQuittingSignal: (int) sig
-{
-  NSLog(@"somebody is killing me.... %d", sig);
 }
 
 @end

@@ -47,7 +47,13 @@
     IBOutlet NSPanel *infoPanel;
     Authenticator *authenticator;
     NSUserDefaults *defaults;
+    pid_t sessionPID;
+    NSTimer *sessionTimer;
+    BOOL xAccessGranted;
+    NSDate *nextAttempt;
+    NSTextField *statusField;
 }
+
 - (void)applicationDidFinishLaunching: (NSNotification *)notification;
 - (void)applicationWillTerminate: (NSNotification *)notification;
 - (void)initializeInterface;

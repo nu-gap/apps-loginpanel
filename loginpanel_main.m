@@ -43,33 +43,30 @@ int main(int argc, const char *argv[])
   XServerManager *manager;
   char *display;
 
-  pool = [NSAutoreleasePool new];
+  pool = [[NSAutoreleasePool alloc] init];
   manager = [XServerManager sharedXServerManager];
-  display = getenv("DISPLAY");
-
+  display = getenv("LOGINPANEL_DISPLAY");
+  if (display == NULL || strlen(display) == 0)
+    display = getenv("DISPLAY");
   if (display != NULL && strlen(display) > 0)
-    [manager setDisplayName: [NSString stringWithCString: display]];
+    [manager setDisplayName: [NSString stringWithUTF8String: display]];
+  setenv("DISPLAY", [[manager displayName] UTF8String], 1);
 
   if (![manager hasUsableDisplay])
     {
-      NSString *loginPanelDisplay;
-
-      loginPanelDisplay = [[[NSProcessInfo processInfo] environment]
-        objectForKey: @"LOGINPANEL_DISPLAY"];
-      if (loginPanelDisplay != nil)
-        [manager setDisplayName: loginPanelDisplay];
-
       if (![manager startXServer])
         {
           NSLog(@"loginpanel could not start or connect to display %@",
             [manager displayName]);
-          [pool release];
+          [manager stopXServer];
+          RELEASE(pool);
           return 1;
         }
     }
 
   setenv("DISPLAY", [[manager displayName] cString], 1);
-  [pool release];
+  RELEASE(pool);
 
   return NSApplicationMain(argc, argv);
 }
+

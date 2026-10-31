@@ -9,28 +9,85 @@ The build also produces loginpaneld, a small supervisor suitable for launching
 from init or a system service.  The supervisor restarts loginpanel if the
 greeter exits unexpectedly.
 
-## System Requirements:
+## Build
 
-Linux, gscrypt, GNUstep
+Requires GNUstep Base, GUI and Make, an Objective-C compiler, X11/Xau development
+libraries, and libcrypt (Linux). Build with `make -f GNUmakefile`.
 
-to use PAM for authentication, run make like:
-make have-pam=yes
+For system deployment, use PAM and install its development headers first:
 
-## Runtime:
+```
+make -f GNUmakefile clean
+make -f GNUmakefile have-pam=yes
+```
 
-Run loginpaneld from the system service responsible for the graphical login.
-When DISPLAY is already set and usable, loginpanel attaches to it.  When no
-display is available, loginpanel starts an X server on :0 by default and sets
-DISPLAY for the greeter and user sessions.
+PAM builds link directly to libpam; gscrypt is no longer required. Clean before
+switching authentication backends. PAM uses the `loginpanel` service, verifies
+account policy, establishes credentials, opens a session before launching the
+desktop, and closes it at logout. Install a distribution-appropriate
+`/etc/pam.d/loginpanel`; [packaging/loginpanel.pam](packaging/loginpanel.pam)
+is an example for Debian/Ubuntu. Password changes and interactive MFA challenges
+are not supported by this two-field greeter; expired passwords are rejected.
 
-Set LOGINPANEL_DISPLAY to choose another display number, for example:
+The default non-PAM build uses the system password database and crypt with the
+complete stored hash. On Linux it checks shadow account/password expiry and
+rejects empty or locked passwords. It does not implement the full PAM policy
+stack and requires root access to read shadow passwords.
 
+## Running
+
+`make -f GNUmakefile install` installs the application and supervisor into your
+configured GNUstep directories. Run `loginpaneld` as root from the system service
+responsible for a **dedicated graphical login display**, with the GNUstep Tools
+directories in PATH. Configure the service to stop its entire process group/cgroup
+on shutdown. Do not enable it alongside another display manager on the same
+seat. This repository does not automatically install or enable a system service.
+
+`LOGINPANEL_DISPLAY` selects the display and takes precedence over `DISPLAY`:
+
+```
 LOGINPANEL_DISPLAY=:1 loginpaneld
+```
 
-The default X server command is compiled from DEFAULT_XSERVER in
-XServerManager.h and can be overridden at build time if a system needs a
-different server path or arguments.
+An accessible existing display is reused. Otherwise an X server is started using
+`DEFAULT_XSERVER` in `XServerManager.h`, with TCP disabled and a private X authority
+cookie. The service must have permission to start X on the selected console/seat;
+Xorg's console policy still applies. Attached displays must allow the greeter to
+manage local-user access. The authenticated local user is granted access for the
+session, and that grant is removed at logout; pre-existing grants are preserved.
+Remote X sessions are not supported.
 
+Enter a local username, press Return or Tab to reach the masked password field,
+and press Return or click **Log In**. Failed authentication clears the password
+and briefly throttles retries. Restart and shutdown require confirmation and root
+privileges.
+
+The session runs with the user's UID, GID, supplementary groups, home directory,
+and a fresh environment plus PAM-provided variables. The first readable regular
+script is run with `/bin/sh`, in this order:
+
+1. `~/.xsession`
+2. `~/.xinitrc`
+3. `/etc/X11/Xsession`
+4. `/etc/X11/xinit/xinitrc`
+5. `/etc/X11/xdm/Xsession`
+
+Use a script that keeps the desktop session in the foreground, for example
+`exec /path/to/your/session-manager`. When it exits, the greeter cleans up its
+process group, closes PAM, and becomes available again. Processes that deliberately
+detach into another process group require the system's session/cgroup manager
+for cleanup. No display-wide X-client kill is performed. Startup failures return
+to the greeter with an error instead of hanging.
+
+## Validation
+
+On Linux, run `sh Tests/run.sh`. Tests use synthetic password records and an
+isolated temporary session home; they do not modify system accounts. They check
+password/hash handling, account rejection, privilege/environment setup, and
+session failure exits and greeter recovery. With Xvfb installed and display `:99`
+free, `sh Tests/run-xserver.sh` checks X cookie protection and server cleanup.
+A real privileged PAM login and the target desktop should
+also be tested on a dedicated seat before deploying as a system display manager.
 
 ## Change History
 06/2026

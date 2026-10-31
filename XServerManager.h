@@ -42,6 +42,7 @@
   pid_t serverPID;
   Display *Dpy;
   NSString *displayName;
+  NSString *authorityPath;
 }
 
 // Initialization Methods

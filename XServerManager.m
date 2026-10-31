@@ -33,6 +33,9 @@
 #include <signal.h>
 #include <errno.h>
 #include <string.h>
+#include <fcntl.h>
+#include <X11/Xauth.h>
+
 
 #if defined(_POSIX_SOURCE) || defined(SYSV) || defined(SVR4)
 # define killpg(pgrp, sig) kill(-(pgrp), sig)
@@ -94,9 +97,7 @@
 {
   Display *display;
 
-  display = XOpenDisplay(NULL);
-  if (display == NULL)
-    display = XOpenDisplay([displayName cString]);
+  display = XOpenDisplay([displayName UTF8String]);
 
   if (display == NULL)
     return NO;
@@ -107,17 +108,76 @@
 
 -(BOOL) startXServer
 {
-  char *xServer[] = DEFAULT_XSERVER;
-  xServer[1] = (char *)[displayName cString];
+  char *defaults[] = DEFAULT_XSERVER;
+  char *xServer[sizeof(defaults) / sizeof(defaults[0]) + 2];
+  char path[] = "/tmp/loginpanel-auth-XXXXXX";
+  char cookie[16];
+  Xauth authorization;
+  FILE *file;
+  int randomFD, fileFD, count;
+  ssize_t received;
+  char *number;
+
+  for (count = 0; defaults[count] != NULL; count++)
+    xServer[count] = defaults[count];
+  xServer[1] = (char *)[displayName UTF8String];
 
   if ([self hasUsableDisplay])
     return YES;
 
-  setenv("DISPLAY", [displayName cString], 1);
+  /* A newly owned X server must require authentication from the outset. */
+  randomFD = open("/dev/urandom", O_RDONLY);
+  if (randomFD < 0)
+    return NO;
+  received = read(randomFD, cookie, sizeof(cookie));
+  close(randomFD);
+  if (received != sizeof(cookie))
+    return NO;
+  fileFD = mkstemp(path);
+  if (fileFD < 0)
+    return NO;
+  file = fdopen(fileFD, "wb");
+  if (file == NULL)
+    {
+      close(fileFD);
+      unlink(path);
+      return NO;
+    }
+  memset(&authorization, 0, sizeof(authorization));
+  authorization.family = FamilyWild;
+  number = strrchr(xServer[1], ':');
+  number = number != NULL ? number + 1 : xServer[1];
+  authorization.number = number;
+  authorization.number_length = strcspn(number, ".");
+  authorization.name = "MIT-MAGIC-COOKIE-1";
+  authorization.name_length = strlen(authorization.name);
+  authorization.data = cookie;
+  authorization.data_length = sizeof(cookie);
+  if (!XauWriteAuth(file, &authorization))
+    {
+      fclose(file);
+      unlink(path);
+      return NO;
+    }
+  if (fclose(file) != 0)
+    {
+      unlink(path);
+      return NO;
+    }
+  ASSIGN(authorityPath, [NSString stringWithUTF8String: path]);
+  xServer[count++] = "-auth";
+  xServer[count++] = path;
+  xServer[count] = NULL;
+  setenv("XAUTHORITY", path, 1);
+  setenv("DISPLAY", [displayName UTF8String], 1);
   serverPID = fork();
 
   if (serverPID == -1)
-    return NO;
+    {
+      unlink([authorityPath fileSystemRepresentation]);
+      DESTROY(authorityPath);
+      return NO;
+    }
 
   if (serverPID == 0)
     {
@@ -138,15 +198,6 @@
   int counter;
   int sig = SIGTERM;
   BOOL result = NO;
-
-  // ignore signals
-  signal(SIGQUIT, SIG_IGN);
-  signal(SIGINT, SIG_IGN);
-  signal(SIGHUP, SIG_IGN);
-  signal(SIGPIPE, SIG_IGN);
-  signal(SIGTERM, SIG_DFL);
-  signal(SIGKILL, SIG_DFL);
-  signal(SIGALRM, SIG_DFL);
 
   if (serverPID <= 0)
     return YES;
@@ -190,6 +241,13 @@
 	    }
 	  sig = SIGKILL;
 	}
+    }
+  if (result)
+    {
+      serverPID = 0;
+      if (authorityPath != nil)
+        unlink([authorityPath fileSystemRepresentation]);
+      DESTROY(authorityPath);
     }
   return result;
 }

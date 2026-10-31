@@ -46,6 +46,7 @@
     /** to remember original rect before shrinking */
     NSRect savedWindowRect;
 }
+
 - (void)initializeInterface;
 - (void)displayPanel;
 - (void)displayPowerButton;
@@ -54,4 +55,5 @@
 - (void)waggle;
 - (void)shrink;
 - (void)restore;
+
 @end

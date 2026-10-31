@@ -30,72 +30,111 @@
 /* Authenticator.m created by me on Wed 17-Nov-1999 */
 
 #import "Authenticator.h"
-
-/* needed on linux to get crypt from unistd */
-#ifdef __linux__
-#define _XOPEN_SOURCE
-#endif
-
-#include <sys/types.h>
 #include <unistd.h>
-#include <signal.h>
-
-#include <grp.h>
-
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#ifdef __linux__
+#include <shadow.h>
+#include <crypt.h>
+#endif
 #if HAVE_OPENBSD_AUTH
 #include <login_cap.h>
 #include <bsd_auth.h>
 #endif
 
+#ifdef HAVE_PAM
+static int
+LoginConversation(int count, const struct pam_message **messages,
+                  struct pam_response **responses, void *context)
+{
+  Authenticator *auth = (Authenticator *)context;
+  struct pam_response *reply;
+  int i;
+
+  if (count <= 0 || count > PAM_MAX_NUM_MSG)
+    return PAM_CONV_ERR;
+  reply = calloc(count, sizeof(*reply));
+  if (reply == NULL)
+    return PAM_BUF_ERR;
+  for (i = 0; i < count; i++)
+    {
+      switch (messages[i]->msg_style)
+        {
+          case PAM_PROMPT_ECHO_ON:
+            reply[i].resp = [auth username] != nil ? strdup([[auth username] UTF8String]) : NULL;
+            break;
+          case PAM_PROMPT_ECHO_OFF:
+            reply[i].resp = [auth password] != nil ? strdup([[auth password] UTF8String]) : NULL;
+            break;
+          case PAM_TEXT_INFO:
+          case PAM_ERROR_MSG:
+            continue;
+          default:
+            goto failure;
+        }
+      if (reply[i].resp == NULL)
+        goto failure;
+    }
+  *responses = reply;
+  return PAM_SUCCESS;
+
+failure:
+  for (i = 0; i < count; i++)
+    {
+      if (reply[i].resp != NULL)
+        {
+          memset(reply[i].resp, 0, strlen(reply[i].resp));
+          free(reply[i].resp);
+        }
+    }
+  free(reply);
+  return PAM_CONV_ERR;
+}
+#endif
+
+static void
+FreeAccount(struct passwd *account)
+{
+  if (account != NULL)
+    {
+      free(account->pw_name);
+      free(account->pw_dir);
+      free(account->pw_shell);
+      free(account);
+    }
+}
 
 @implementation Authenticator
-// Initialization methods
-- (id)init
-{
-  [super init];
-  NSLog(@"Initing authenticator");
-  username = nil;
-  password = nil;
-#ifdef __linux__
-  passwordFilePath = @"/etc/shadow";
-#else 
-  passwordFilePath = @"/etc/master.passwd";
-#endif
-  return self;
-}
 
-- initWithUsername: (NSString *)user
-          password: (NSString *)pass
+- (id)initWithUsername: (NSString *)user password: (NSString *)pass
 {
-  [self init];
-  username = [user copy];
-  password = [pass copy];
-  return self;
-}
-
-- (void)_readLine :(FILE *)f :(char *)l
-{
-    int ch;
-    
-    ch = fgetc(f);
-    while (ch != EOF && ch != '\n')
+  self = [super init];
+  if (self != nil)
     {
-        *l = ch;
-        l++;
-        ch = fgetc(f);
+      [self setUsername: user];
+      [self setPassword: pass];
     }
-    *l = '\0';
+  return self;
 }
 
-// Accessor methods
+- (void)dealloc
+{
+  [self closeSession];
+  FreeAccount(pw);
+  DESTROY(username);
+  DESTROY(password);
+  DEALLOC;
+}
+
 - (void)setUsername: (NSString *)user
 {
-  username = user;
+  ASSIGNCOPY(username, user);
 }
 
 - (void)setPassword: (NSString *)pass
 {
-  password = pass;
+  ASSIGNCOPY(password, pass);
 }
 
 - (NSString *)username
@@ -113,102 +152,153 @@
   return pw;
 }
 
-
-/** perform the actual password verification */
 - (BOOL)isPasswordCorrect
 {
-  NSLog(@"Verifying... %@", username);
-
-#if HAVE_OPENBSD_AUTH
-  BOOL ret;
-
-  ret = (BOOL)auth_userokay((char *)[username cStringUsingEncoding:NSUTF8StringEncoding] ,NULL,NULL,
-			(char *)[password cStringUsingEncoding:NSUTF8StringEncoding]);  
-  pw = getpwnam([username cString]);
-  return ret;
+  BOOL valid = NO;
+  [self closeSession];
+  FreeAccount(pw);
+  pw = NULL;
+  if ([username length] == 0 || [password length] == 0
+      || strlen([username UTF8String]) != [username lengthOfBytesUsingEncoding: NSUTF8StringEncoding]
+      || strlen([password UTF8String]) != [password lengthOfBytesUsingEncoding: NSUTF8StringEncoding])
+    return NO;
+#ifdef HAVE_PAM
+  {
+    struct pam_conv conversation = { LoginConversation, self };
+    const void *canonicalUser = NULL;
+    int result = pam_start("loginpanel", [username UTF8String], &conversation, &handle);
+    if (result == PAM_SUCCESS && getenv("DISPLAY") != NULL)
+      result = pam_set_item(handle, PAM_TTY, getenv("DISPLAY"));
+    if (result == PAM_SUCCESS)
+      result = pam_authenticate(handle, PAM_DISALLOW_NULL_AUTHTOK);
+    if (result == PAM_SUCCESS)
+      result = pam_acct_mgmt(handle, 0);
+    if (result == PAM_SUCCESS)
+      result = pam_get_item(handle, PAM_USER, &canonicalUser);
+    if (result == PAM_SUCCESS && canonicalUser != NULL)
+      {
+        [self setUsername: [NSString stringWithUTF8String: canonicalUser]];
+        valid = YES;
+      }
+  }
+#elif HAVE_OPENBSD_AUTH
+  valid = auth_userokay((char *)[username UTF8String], NULL, NULL,
+                       (char *)[password UTF8String]);
+#else
+  {
+    const char *hash = NULL;
+    char *candidate;
+    struct passwd *record = getpwnam([username UTF8String]);
+    if (record != NULL)
+      hash = record->pw_passwd;
+#ifdef __linux__
+    if (hash != NULL && strcmp(hash, "x") == 0)
+      {
+        struct spwd *shadow = getspnam([username UTF8String]);
+        long today = time(NULL) / 86400;
+        if (shadow == NULL || shadow->sp_lstchg == 0
+            || (shadow->sp_expire >= 0 && today >= shadow->sp_expire)
+            || (shadow->sp_max >= 0 && shadow->sp_lstchg >= 0
+                && today >= shadow->sp_lstchg + shadow->sp_max))
+          hash = NULL;
+        else
+          hash = shadow->sp_pwdp;
+      }
 #endif
-
-
-  if(YES)  // we should do this if we have a master password file
+    if (hash != NULL && hash[0] != '\0' && hash[0] != '!' && hash[0] != '*')
+      {
+        candidate = crypt([password UTF8String], hash);
+        valid = candidate != NULL && strcmp(candidate, hash) == 0;
+      }
+  }
+#endif
+  if (valid)
     {
-      NSString *pwdFileStr;
-      NSEnumerator *enu;
-      NSArray *usersArray;
-      NSString *userLine;
-      NSString *userNameWithColon;
-      unsigned int userNameLen;
-      NSString *cryptedPwdFromFile;
-
-      userNameWithColon = [username stringByAppendingString:@":"];
-      userNameLen = [userNameWithColon length];
-      //      NSLog(@"password: %@", password);
-
-      pwdFileStr = [NSString stringWithContentsOfFile:passwordFilePath];
-      if ([pwdFileStr length] == 0)
-        NSLog(@"Empty password file");
-      usersArray = [pwdFileStr componentsSeparatedByString:@"\n"];
-      cryptedPwdFromFile = nil;
-      enu = [usersArray objectEnumerator];
-      while((userLine = [enu nextObject]) && cryptedPwdFromFile == nil)
+      struct passwd *record = getpwnam([username UTF8String]);
+      valid = record != NULL && record->pw_shell != NULL
+        && strcmp(record->pw_shell, "/usr/sbin/nologin") != 0
+        && strcmp(record->pw_shell, "/sbin/nologin") != 0
+        && strcmp(record->pw_shell, "/bin/false") != 0;
+      if (valid)
         {
-	  //	  NSLog(@"line %@", userLine);
-	  if ([userLine length] > userNameLen)
-	    {
-	     if ([userLine compare: userNameWithColon options:NSLiteralSearch
-	      range:NSMakeRange(0, userNameLen)] == NSOrderedSame)
-	        {
-		  NSArray *pwdLineArray;
-	          NSLog(@"found %@", userLine);
-                  pwdLineArray = [userLine componentsSeparatedByString:@":"];
-		  cryptedPwdFromFile = [pwdLineArray objectAtIndex:1];
-	        }
+          pw = calloc(1, sizeof(*pw));
+          if (pw != NULL)
+            {
+              pw->pw_uid = record->pw_uid;
+              pw->pw_gid = record->pw_gid;
+              pw->pw_name = strdup(record->pw_name);
+              pw->pw_dir = strdup(record->pw_dir);
+              pw->pw_shell = strdup(record->pw_shell);
+              valid = pw->pw_name != NULL && pw->pw_dir != NULL && pw->pw_shell != NULL;
             }
-	}
-      if (cryptedPwdFromFile != nil)
-	{
-	  unsigned int saltEnd;
-	  
-	  NSLog(@"pass from file: %@", cryptedPwdFromFile);
-	  saltEnd = 3;
-	  while (saltEnd < [cryptedPwdFromFile length] && [cryptedPwdFromFile
-	  characterAtIndex:saltEnd] != '$')
-	    saltEnd++;
-	  if (saltEnd < [cryptedPwdFromFile length])
-	    {
-	      NSString *salt;
-	      NSString *recrypted;
-	      
-	      salt = [cryptedPwdFromFile substringFromRange:NSMakeRange(0, saltEnd)];
-	      NSLog(@"Salt: %@", salt);
-	      recrypted = [NSString stringWithCString:crypt([password cString],
-	      [salt cString])];
-	      NSLog(@"recrypted: %@", recrypted);
-	      if ([recrypted compare:cryptedPwdFromFile options:NSLiteralSearch] == NSOrderedSame)
-	        {
-		  NSLog(@"Equal");
-		  pw = getpwnam([username cString]);
-		  return YES;
-		}
-		else
-	        {
-		  NSLog(@"Not Equal");
-		  return NO;
-		}
-	    }
-	    else
-	    {
-	      NSLog(@"error, no salt found in password");
-	      return NO;
-	    }
-	}
+          else
+            valid = NO;
+        }
     }
-  return NO;
+  if (!valid)
+    {
+      FreeAccount(pw);
+      pw = NULL;
+      [self closeSession];
+    }
+  return valid;
+}
+
+- (BOOL)openSession
+{
+  if (pw == NULL)
+    return NO;
+#ifdef HAVE_PAM
+  if (handle == NULL || pam_setcred(handle, PAM_ESTABLISH_CRED) != PAM_SUCCESS)
+    return NO;
+  credentialsEstablished = YES;
+  if (pam_open_session(handle, 0) != PAM_SUCCESS)
+    {
+      [self closeSession];
+      return NO;
+    }
+  sessionOpen = YES;
+#endif
+  return YES;
+}
+
+- (void)closeSession
+{
+#ifdef HAVE_PAM
+  if (handle != NULL)
+    {
+      if (sessionOpen)
+        pam_close_session(handle, 0);
+      if (credentialsEstablished)
+        pam_setcred(handle, PAM_DELETE_CRED);
+      pam_end(handle, PAM_SUCCESS);
+      handle = NULL;
+    }
+  sessionOpen = NO;
+  credentialsEstablished = NO;
+#endif
 }
 
 - (void)setEnvironment
 {
-  chdir(pw->pw_dir);
+#ifdef HAVE_PAM
+  char **environment = pam_getenvlist(handle);
+  char **entry;
+  if (environment != NULL)
+    {
+      for (entry = environment; *entry != NULL; entry++)
+        {
+          char *separator = strchr(*entry, '=');
+          if (separator != NULL)
+            {
+              *separator = '\0';
+              setenv(*entry, separator + 1, 1);
+            }
+          free(*entry);
+        }
+      free(environment);
+    }
+#endif
 }
-
 
 @end
