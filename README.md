@@ -9,6 +9,8 @@ The build also produces loginpaneld, a small supervisor suitable for launching
 from init or a system service.  The supervisor restarts loginpanel if the
 greeter exits unexpectedly.
 
+![GNUstep loginpanel greeter with name and password fields and Log In, Restart, and Power buttons](docs/images/loginpanel.png)
+
 ## Build
 
 Requires GNUstep Base, GUI and Make, an Objective-C compiler, X11/Xau development
